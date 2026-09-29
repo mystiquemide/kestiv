@@ -30,7 +30,7 @@ export const DEFAULT_POLICY: Policy = {
   minHolders: 25,
   minSliceLamports: 50_000_000,
   liquidityShareBps: 100,
-  maxPriceImpact: 0.015,
+  maxPriceImpact: 0.025,
   slippageBps: 100,
   vwapWindowSec: 6 * 3600,
   vwapMinSwaps: 5,

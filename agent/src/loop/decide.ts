@@ -7,6 +7,7 @@ export interface Gate {
   value: number | string | null;
   threshold: number | string;
   pass: boolean;
+  source?: string;
 }
 
 export interface DecideInputs {
@@ -16,6 +17,7 @@ export interface DecideInputs {
   cooldownUntilSec?: number;
   priceUsd?: number | null;
   volume24hUsd?: number | null;
+  volumeSource?: string | null;
   holders?: number | null;
   liquidityUsd?: number | null;
   swapsInWindow?: number;
@@ -64,7 +66,7 @@ export function decide(input: DecideInputs, policy: Policy): Decision {
   if (defined(input.volume24hUsd) || input.volume24hUsd === null) {
     const v = input.volume24hUsd;
     add(
-      { name: "volume_24h_usd", value: v, threshold: policy.minVolume24hUsd, pass: v !== null && v >= policy.minVolume24hUsd },
+      { name: "volume_24h_usd", value: v, threshold: policy.minVolume24hUsd, pass: v !== null && v >= policy.minVolume24hUsd, ...(input.volumeSource ? { source: input.volumeSource } : {}) },
       "WAIT",
       v === null ? "volume_unavailable" : "volume_below_min",
     );

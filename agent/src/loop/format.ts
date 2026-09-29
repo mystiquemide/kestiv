@@ -12,7 +12,7 @@ export function formatRun(r: RunResult): string {
   if (d.signals) {
     const s = d.signals;
     lines.push(
-      `${p}signals  price $${fmt(s.priceUsd)}  SOL $${fmt(s.solUsd)}  vol24h $${fmt(s.volume24hUsd)}  liq $${fmt(s.liquidityUsd)}  holders ${fmt(s.holders)}  swaps(6h) ${fmt(s.swapsInWindow)}/${fmt(s.swapsFetched)}`,
+      `${p}signals  price $${fmt(s.priceUsd)}  SOL $${fmt(s.solUsd)}  vol24h $${fmt(s.volume24hUsd)} (${fmt(s.volumeSource)})  liq $${fmt(s.liquidityUsd)}  holders ${fmt(s.holders)}  swaps(6h) ${fmt(s.swapsInWindow)}/${fmt(s.swapsFetched)}`,
     );
   }
   if (r.budget) {
@@ -23,7 +23,7 @@ export function formatRun(r: RunResult): string {
   }
   const gates = (d.gates ?? []) as Gate[];
   for (const g of gates) {
-    lines.push(`${p}gate ${g.pass ? "PASS" : "FAIL"}  ${g.name}  value=${fmt(g.value)}  threshold=${fmt(g.threshold)}`);
+    lines.push(`${p}gate ${g.pass ? "PASS" : "FAIL"}  ${g.name}  value=${fmt(g.value)}${g.source ? ` (${g.source})` : ""}  threshold=${fmt(g.threshold)}`);
   }
   if (d.quote) {
     lines.push(`${p}quote    ${d.quote.inLamports} lamports -> ${d.quote.outAmount} out (min ${d.quote.minOutAmount}), impact ${(d.quote.priceImpact * 100).toFixed(3)}%, route ${d.quote.route.join(">")}`);

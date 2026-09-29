@@ -289,6 +289,47 @@ describe("buy signature persistence", () => {
   });
 });
 
+describe("volume fallback in the run", () => {
+  const withVolume = (swapList: SwapEvent[]) => {
+    (h.ports.price as { token: () => Promise<unknown> }).token = async () => ({ mint: MINT, priceUsd: 0.00001, volume24hUsd: null, liquidityUsd: 100_000, marketCapUsd: null, updatedAt: null });
+    (h.ports.chain as unknown as { swaps: () => Promise<SwapEvent[]> }).swaps = async () => swapList;
+  };
+  const many = (n: number, sol: number, ageStep: number): SwapEvent[] =>
+    Array.from({ length: n }, (_, i) => ({ sig: `v${i}`, ts: NOW - ageStep * (i + 1), wallet: `w${i % 5}`, side: i % 2 ? "sell" : "buy", tokenAmount: 1_000_000_000n, solAmount: sol * 1e9 }));
+
+  it("passes on a 24h fallback above the threshold and reports the source", async () => {
+    withVolume(many(30, 1, 2000));
+    const r = await runOnce(h.ports);
+    expect(r.state).toBe("BOUGHT");
+    expect((r.details.signals as { volumeSource: string }).volumeSource).toBe("swaps_lower_bound");
+  });
+
+  it("fails with volume_below_min when the lower bound is under the threshold", async () => {
+    withVolume(many(10, 1, 3000));
+    const r = await runOnce(h.ports);
+    expect(r).toMatchObject({ state: "WAITING", reason: "volume_below_min" });
+    const gate = (r.details.gates as { name: string; source?: string }[]).find((g) => g.name === "volume_24h_usd");
+    expect(gate?.source).toBe("swaps_lower_bound");
+  });
+
+  it("reports swaps_24h when the swaps span more than a day", async () => {
+    withVolume([...many(25, 1, 100), { sig: "old", ts: NOW - 90_000, wallet: "w1", side: "buy", tokenAmount: 1n, solAmount: 1e9 }]);
+    const r = await runOnce(h.ports);
+    expect((r.details.signals as { volumeSource: string }).volumeSource).toBe("swaps_24h");
+  });
+
+  it("stays volume_unavailable with no swaps and no ClawPump figure", async () => {
+    withVolume([]);
+    const r = await runOnce(h.ports);
+    expect(r).toMatchObject({ state: "WAITING", reason: "volume_unavailable" });
+  });
+
+  it("a ClawPump figure wins over the fallback", async () => {
+    const r = await runOnce(h.ports);
+    expect((r.details.signals as { volumeSource: string }).volumeSource).toBe("clawpump");
+  });
+});
+
 describe("intake", () => {
   const fee = (sig: string, lamports: number): IncomingTransfer => ({ sig, lamports, sender: FEE_SRC, ts: NOW - 50 });
 

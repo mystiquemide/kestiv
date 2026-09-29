@@ -49,7 +49,7 @@ describe("decide", () => {
     ["budget low", { spendableLamports: 49_999_999 }, "WAIT", "budget_below_min_slice"],
     ["liquidity cap low", { liquidityCapLamports: 10_000_000 }, "WAIT", "liquidity_cap_below_min_slice"],
     ["cap headroom low", { capHeadroomLamports: 10_000_000 }, "WAIT", "cap_headroom_below_min_slice"],
-    ["impact", { quote: { priceImpact: 0.0151, spotLamportsPerToken: 1 } }, "SKIP", "price_impact_too_high"],
+    ["impact", { quote: { priceImpact: 0.0251, spotLamportsPerToken: 1 } }, "SKIP", "price_impact_too_high"],
     ["spot over vwap", { quote: { priceImpact: 0.01, spotLamportsPerToken: 1.31 } }, "SKIP", "price_above_vwap"],
     ["usepod skip", { usepod: { outcome: "ok", verdict: "skip" } }, "SKIP", "usepod_skip"],
     ["usepod quote", { usepod: { outcome: "quote_too_high", lamports: 999_999 } }, "SKIP", "usepod_quote_too_high"],
@@ -61,13 +61,23 @@ describe("decide", () => {
   });
 
   it("passes at the exact thresholds", () => {
-    const d = decide({ ...full, volume24hUsd: 2000, holders: 25, swapsInWindow: 5, spendableLamports: 50_000_000, quote: { priceImpact: 0.015, spotLamportsPerToken: 1.3 } }, P);
+    const d = decide({ ...full, volume24hUsd: 2000, holders: 25, swapsInWindow: 5, spendableLamports: 50_000_000, quote: { priceImpact: 0.025, spotLamportsPerToken: 1.3 } }, P);
     expect(d.action).toBe("BUY");
   });
 
   it("slice is the minimum of budget, liquidity cap and cap headroom", () => {
     expect(decide({ ...base, spendableLamports: 900, liquidityCapLamports: 800_000_000, capHeadroomLamports: 300_000_000 }, P).details.sliceLamports).toBe(900);
     expect(decide({ ...base, spendableLamports: 900_000_000, liquidityCapLamports: 800_000_000, capHeadroomLamports: 300_000_000 }, P).details.sliceLamports).toBe(300_000_000);
+  });
+
+  it("records the volume source on the gate and applies the threshold edges to any source", () => {
+    for (const source of ["clawpump", "swaps_24h", "swaps_lower_bound"]) {
+      const at = decide({ ...full, volume24hUsd: 2000, volumeSource: source }, P);
+      expect(at.action).toBe("BUY");
+      expect(at.details.gates.find((g) => g.name === "volume_24h_usd")).toMatchObject({ source, pass: true });
+      const below = decide({ ...full, volume24hUsd: 1999.99, volumeSource: source }, P);
+      expect(below).toMatchObject({ action: "WAIT", reason: "volume_below_min" });
+    }
   });
 
   it("reports every gate with value and threshold even after a failure", () => {
@@ -114,7 +124,7 @@ describe("policy", () => {
   });
 
   it("defaults match the brief", () => {
-    expect(P).toMatchObject({ stakeShareBps: 5000, capBps: 700, minVolume24hUsd: 2000, minHolders: 25, minSliceLamports: 50_000_000, maxPriceImpact: 0.015, slippageBps: 100, opsReserveLamports: 20_000_000, maxUsepodLamports: 300_000 });
+    expect(P).toMatchObject({ stakeShareBps: 5000, capBps: 700, minVolume24hUsd: 2000, minHolders: 25, minSliceLamports: 50_000_000, maxPriceImpact: 0.025, slippageBps: 100, opsReserveLamports: 20_000_000, maxUsepodLamports: 300_000 });
     expect(loadPolicy()).toEqual(P);
   });
 });

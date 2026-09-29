@@ -1,6 +1,7 @@
 import { vwap } from "../chain/swaps.js";
 import { assertLockTerms, LockTermsError } from "../lock/read.js";
 import type { InflowRow } from "../store/index.js";
+import { resolveVolume } from "./volume.js";
 import { computeBudget, stakeShare, type Budget } from "./budget.js";
 import { decide, type DecideInputs, type Decision } from "./decide.js";
 import type { Ports, RunResult, RunState } from "./types.js";
@@ -111,13 +112,15 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
     const liquidityCapLamports =
       price.liquidityUsd && solUsd ? price.liquidityUsd * (policy.liquidityShareBps / 10_000) * lamportsPerUsd : null;
 
+    const volume = resolveVolume(price.volume24hUsd, swaps, startedAt, solUsd);
     const inputs: DecideInputs = {
       nowSec: startedAt,
       capReached: false,
       capInfo: { stakeTokens: stakeTokens.toString(), capTokens: capTokens.toString() },
       cooldownUntilSec: Number(store.getConfig("cooldown_until") ?? 0),
       priceUsd: price.priceUsd,
-      volume24hUsd: price.volume24hUsd,
+      volume24hUsd: volume.usd,
+      volumeSource: volume.source,
       holders,
       liquidityUsd: price.liquidityUsd,
       swapsInWindow: windowSwaps.length,
@@ -129,7 +132,8 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
     details.signals = {
       priceUsd: price.priceUsd,
       solUsd,
-      volume24hUsd: price.volume24hUsd,
+      volume24hUsd: volume.usd,
+      volumeSource: volume.source,
       liquidityUsd: price.liquidityUsd,
       holders,
       swapsFetched: swaps.length,
