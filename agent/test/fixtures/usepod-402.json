@@ -1,0 +1,123 @@
+{
+ "x402_version": 2,
+ "x402Version": 2,
+ "quote_id": "df257f22-7135-429c-9f11-bf76df892056",
+ "resource": {
+  "description": "UsePod inference: deepseek-v4-flash",
+  "mimeType": "application/json",
+  "url": "https://api.usepod.ai/proxy/x402/v1/chat/completions"
+ },
+ "accepts": [
+  {
+   "x402_version": 2,
+   "quote_id": "df257f22-7135-429c-9f11-bf76df892056",
+   "scheme": "exact",
+   "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "pay_to": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "asset": "USDC",
+   "amount_microunits": 19,
+   "mode": "cap-with-surplus-credit",
+   "expires_at": "2026-09-29T23:30:05.510410495Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "f66c0b785070ebe061f53c8c8c0e88974fa2389f2485ebd5a77295ac674460e7",
+   "model": "deepseek-v4-flash",
+   "balance_hint": "wallets with an x402 surplus balance may retry with scheme \"balance\": sign \"usepod-x402-spend:df257f22-7135-429c-9f11-bf76df892056\" with the payer wallet and send it as payload.proof"
+  },
+  {
+   "x402_version": 2,
+   "quote_id": "df257f22-7135-429c-9f11-bf76df892056",
+   "scheme": "exact",
+   "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "pay_to": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "asset": "SOL",
+   "amount_microunits": 161,
+   "mode": "cap-with-surplus-credit",
+   "expires_at": "2026-09-29T23:30:05.510410495Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "f66c0b785070ebe061f53c8c8c0e88974fa2389f2485ebd5a77295ac674460e7",
+   "model": "deepseek-v4-flash"
+  },
+  {
+   "x402_version": 2,
+   "quote_id": "df257f22-7135-429c-9f11-bf76df892056",
+   "scheme": "exact",
+   "network": "eip155:8453",
+   "pay_to": "0x8715CBcE377293F83805F4B60F1490a6DC9DF19C",
+   "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+   "amount_microunits": 19,
+   "mode": "exact",
+   "expires_at": "2026-09-29T23:30:05.510410495Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "f66c0b785070ebe061f53c8c8c0e88974fa2389f2485ebd5a77295ac674460e7",
+   "model": "deepseek-v4-flash",
+   "x402Version": 2,
+   "amount": "19",
+   "maxAmountRequired": "19",
+   "payTo": "0x8715CBcE377293F83805F4B60F1490a6DC9DF19C",
+   "maxTimeoutSeconds": 300,
+   "resource": "https://api.usepod.ai/proxy/x402/v1/chat/completions",
+   "description": "UsePod inference: deepseek-v4-flash",
+   "mimeType": "application/json",
+   "extra": {
+    "name": "USD Coin",
+    "version": "2"
+   }
+  },
+  {
+   "x402_version": 2,
+   "quote_id": "df257f22-7135-429c-9f11-bf76df892056",
+   "scheme": "exact",
+   "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "pay_to": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+   "amount_microunits": 10000,
+   "mode": "cap-with-surplus-credit",
+   "expires_at": "2026-09-29T23:30:05.510410495Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "f66c0b785070ebe061f53c8c8c0e88974fa2389f2485ebd5a77295ac674460e7",
+   "model": "deepseek-v4-flash",
+   "x402Version": 2,
+   "amount": "10000",
+   "maxAmountRequired": "10000",
+   "payTo": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "maxTimeoutSeconds": 300,
+   "resource": "https://api.usepod.ai/proxy/x402/v1/chat/completions",
+   "description": "UsePod inference: deepseek-v4-flash",
+   "mimeType": "application/json",
+   "extra": {
+    "feePayer": "7aJCEWDE3SwKSPMRSDrxGy6XxpwW6Nd3cHm3fUfZQiUA"
+   }
+  },
+  {
+   "x402_version": 2,
+   "quote_id": "df257f22-7135-429c-9f11-bf76df892056",
+   "scheme": "exact",
+   "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "pay_to": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "asset": "So11111111111111111111111111111111111111112",
+   "amount_microunits": 84737,
+   "mode": "cap-with-surplus-credit",
+   "expires_at": "2026-09-29T23:30:05.510410495Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "f66c0b785070ebe061f53c8c8c0e88974fa2389f2485ebd5a77295ac674460e7",
+   "model": "deepseek-v4-flash",
+   "x402Version": 2,
+   "amount": "84737",
+   "maxAmountRequired": "84737",
+   "payTo": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "maxTimeoutSeconds": 300,
+   "resource": "https://api.usepod.ai/proxy/x402/v1/chat/completions",
+   "description": "UsePod inference: deepseek-v4-flash",
+   "mimeType": "application/json",
+   "extra": {
+    "feePayer": "7aJCEWDE3SwKSPMRSDrxGy6XxpwW6Nd3cHm3fUfZQiUA"
+   }
+  }
+ ],
+ "extensions": {}
+}

@@ -14,6 +14,9 @@ export const ENV_VARS = [
   "STATUS_PORT",
   "SOLANA_CLUSTER",
   "SOLANA_RPC_URL",
+  "KESTIV_WALLET",
+  "KESTIV_POLICY_FILE",
+  "KESTIV_STATUS_PATH",
 ] as const;
 
 export type EnvVar = (typeof ENV_VARS)[number];
@@ -26,6 +29,8 @@ const OPTIONAL_VARS: readonly EnvVar[] = [
   "STATUS_PORT",
   "SOLANA_CLUSTER",
   "SOLANA_RPC_URL",
+  "KESTIV_POLICY_FILE",
+  "KESTIV_STATUS_PATH",
 ];
 
 export class ConfigError extends Error {
@@ -57,6 +62,9 @@ const nonEmpty = z.string().min(1);
 
 const schema = z.object({
   KESTIV_KEYPAIR_PATH: nonEmpty,
+  KESTIV_WALLET: pubkey,
+  KESTIV_POLICY_FILE: nonEmpty.optional(),
+  KESTIV_STATUS_PATH: nonEmpty.optional(),
   FOUNDER_WALLET: pubkey,
   KESTIV_MINT: pubkey,
   CLAWPUMP_API_KEY: nonEmpty,
@@ -100,8 +108,13 @@ export function readEnv(base: EnvSource = process.env): EnvSource {
   return merged;
 }
 
-export function loadConfig(env: EnvSource = readEnv()): Config {
-  const result = schema.safeParse(env);
+const dryRunSchema = schema.extend({ KESTIV_KEYPAIR_PATH: nonEmpty.optional() });
+export type DryRunConfig = z.infer<typeof dryRunSchema>;
+
+export function loadConfig(env?: EnvSource): Config;
+export function loadConfig(env: EnvSource, opts: { keypairOptional: true }): DryRunConfig;
+export function loadConfig(env: EnvSource = readEnv(), opts?: { keypairOptional: true }): Config | DryRunConfig {
+  const result = (opts?.keypairOptional ? dryRunSchema : schema).safeParse(env);
   if (result.success) return result.data;
   const missing = new Set<string>();
   const invalid = new Set<string>();
@@ -120,7 +133,7 @@ export function inspectEnv(env: EnvSource = readEnv()): Record<EnvVar, VarState>
   for (const name of ENV_VARS) {
     const value = env[name];
     if (value === undefined) out[name] = "missing";
-    else if ((name === "FOUNDER_WALLET" || name === "KESTIV_MINT") && !isPubkey(value)) out[name] = "invalid";
+    else if ((name === "FOUNDER_WALLET" || name === "KESTIV_MINT" || name === "KESTIV_WALLET") && !isPubkey(value)) out[name] = "invalid";
     else if (name === "STATUS_PORT" && !schema.shape.STATUS_PORT.safeParse(value).success) out[name] = "invalid";
     else if (name === "SOLANA_CLUSTER" && !schema.shape.SOLANA_CLUSTER.safeParse(value).success) out[name] = "invalid";
     else if (name === "SOLANA_RPC_URL" && !schema.shape.SOLANA_RPC_URL.safeParse(value).success) out[name] = "invalid";

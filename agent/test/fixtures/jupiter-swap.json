@@ -1,0 +1,24 @@
+{
+ "swapTransaction": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQAQHvWg9f2X6cneITJqj+t2XvTMvyj23pHKMa+VAFfJG3mrAXDB406Gp/UwVKtZNynwtTky41uNx9VhLogzpy36/GoE0WkGvqmGC+oBbsS+uragQYGdeGrhMKvhKerLVpjtcS0IThIyhsC5rPflPtu6+i+w6xRt9EdH/NOgDZFNfsufQErHts3tuZlfonE07afyBUBRDiH7FntyEC2a36DLs2tB63ZJ4pK4Oael5/XFFMtb+j2AAvcmT2mbiHAkj8oAO0rC+NDdXLyX4yicGXy1BipU89lWuc5uURX5ZWeqXLPmd9kVlV+IgHMc60p1oMyWwXT6QJXE4dmWes/EKEWuZ66IVVaansrqXIJsur6cmefYpfAN0vCTMvBTlNwI3NCuN6XGmn8pkFG4AugRSBYpF0F/WXPm6BKbWblA/GacnPRBq39DLcmDKRY8OH8JwIQd0xmpHtPBu0uFte3TpYufnZrFS5a1yTGUHkbqS+Lg4xEndE/Gt0z7RV7+r4vVcXks7dpEKc9Kmcbrhge0uJhGSVpzUmo4TCy8Pd2BTulSCKUR8NIgkQa1HW0wSkJYhMHvQxsgdzKA+uOp8OjxmHxzt80AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFW4PaTZlrPRNsVaL8XW6pRicuX9dL/O2VdK7b9bRiwAwZGb+UhFzL/7K26csOb57yM5bvF9xJrLEObOkAAAAAEedVb8jHAbu50xW7OaBUH/bGy3qP0jlECsc2iVrwTjwabiFf+q4GE+2h/Y0YYwDXaxDncGus7VZig8AAAAAABBt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKkG3fbh7nWP3hhCXbzkbM3athr8TYO5DSf+vfko2KGL/Aw1/6kFWo5Wjaj3vAdWFSdM8ckspB9AAJxRaqQUwnxwOoZeae4PVIDKvPZjV+TcLxjVjUXB6nSJ+zcj2Xk8cqZPrzEQwGje8o+prjrKccsbsXESJnWwv8GbZfA0c7BUz2+atKTxlY3AqclMP7csB5lYQ+2kheOiTxDGk5n4GZQPjJclj04kifG7PRApFI4NgwtaE5na/xCEBI572Nvp+FmqRgi2kcLCXdupVq9Y3AeExdPL1f8ou6O+c+btoGjLXqzxNusB/BxOiD0jyLWESrWaN/Zq3VfF6aw7U+BZ01xktD/6J/XX9kp0wJsfKVh53ksJqzbfyd1RSzIap7OM5ej6CRGlSGNBLWMfTgeHAylsA18NEzOg2ciDjXO3EP5uLSnsfO0XuSVMlD+Xo5pRUU119fD8PnJ/D2FfmRZcyqYSCBAABQLAXBUAEAAJA6IHBAAAAAAAGQYADQASDhMBAQ4CAA0MAgAAAIDw+gIAAAAAEwENAREZBgAFABcOFAEBESgUAA0FERcRHBEPFhcSFBMZBgcLCQoDAQAFDQIIGh0MBBgVDhsPAA0RJeUXy5d6460qAQAAALsAAWQAAYDw+gIAAAAAbO02M/cAAABkAAATAw0AAAEJAA==",
+ "lastValidBlockHeight": 429828210,
+ "prioritizationFeeLamports": 369737,
+ "computeUnitLimit": 1400000,
+ "loadedAccountsDataSize": 15932370,
+ "loadedAccountsDataSizeLimit": null,
+ "transactionVersion": 0,
+ "prioritizationType": {
+  "computeBudget": {
+   "microLamports": 264098,
+   "estimatedMicroLamports": 264098
+  }
+ },
+ "simulationSlot": 451788637,
+ "dynamicSlippageReport": null,
+ "simulationError": {
+  "errorCode": "TRANSACTION_ERROR",
+  "error": "Error processing Instruction 2: custom program error: 0x1"
+ },
+ "addressesByLookupTableAddress": null,
+ "timeTaken": 0.029067141,
+ "createAtaTimeTaken": 0.021057424
+}

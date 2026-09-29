@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS inflows (
   sig TEXT PRIMARY KEY,
   lamports INTEGER,
   source TEXT CHECK(source IN ('fee','seed')),
-  ts INTEGER
+  ts INTEGER,
+  sender TEXT
 );
 CREATE TABLE IF NOT EXISTS forwards (
   sig TEXT PRIMARY KEY,
@@ -19,16 +20,32 @@ CREATE TABLE IF NOT EXISTS slices (
   buy_sig TEXT,
   lock_sig TEXT,
   reason TEXT,
-  created_ts INTEGER
+  created_ts INTEGER,
+  last_valid_height INTEGER
 );
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY,
   state TEXT,
   reason TEXT,
-  ts INTEGER
+  ts INTEGER,
+  details TEXT,
+  txs TEXT
 );
 CREATE TABLE IF NOT EXISTS config (
   key TEXT PRIMARY KEY,
   value TEXT
 );
+CREATE TABLE IF NOT EXISTS expenses (
+  sig TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  lamports INTEGER NOT NULL,
+  ts INTEGER
+);
 `;
+
+export const ADDED_COLUMNS: readonly { table: string; column: string; type: string }[] = [
+  { table: "inflows", column: "sender", type: "TEXT" },
+  { table: "slices", column: "last_valid_height", type: "INTEGER" },
+  { table: "runs", column: "details", type: "TEXT" },
+  { table: "runs", column: "txs", type: "TEXT" },
+];

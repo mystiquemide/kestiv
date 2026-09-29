@@ -4,6 +4,7 @@ import { ConfigError, inspectEnv, loadConfig, resolveRpc } from "../src/config.j
 
 const valid = () => ({
   KESTIV_KEYPAIR_PATH: "/tmp/secret-path-value.json",
+  KESTIV_WALLET: Keypair.generate().publicKey.toBase58(),
   FOUNDER_WALLET: Keypair.generate().publicKey.toBase58(),
   KESTIV_MINT: Keypair.generate().publicKey.toBase58(),
   CLAWPUMP_API_KEY: "cp-secret-value",
@@ -90,5 +91,21 @@ describe("resolveRpc", () => {
       kind: "public",
     });
     expect(resolveRpc({ SOLANA_CLUSTER: "devnet" })).toEqual({ url: "https://api.devnet.solana.com", kind: "public" });
+  });
+});
+
+describe("run configuration", () => {
+  it("dry runs do not need a keypair path", () => {
+    const env = valid();
+    delete (env as Partial<typeof env>).KESTIV_KEYPAIR_PATH;
+    expect(() => loadConfig(env)).toThrow(/KESTIV_KEYPAIR_PATH/);
+    expect(loadConfig(env, { keypairOptional: true }).KESTIV_KEYPAIR_PATH).toBeUndefined();
+  });
+
+  it("requires a valid KESTIV_WALLET", () => {
+    const env = valid();
+    delete (env as Partial<typeof env>).KESTIV_WALLET;
+    expect(() => loadConfig(env)).toThrow(/KESTIV_WALLET/);
+    expect(() => loadConfig({ ...valid(), KESTIV_WALLET: "nope" })).toThrow(/KESTIV_WALLET/);
   });
 });

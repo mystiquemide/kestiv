@@ -1,3 +1,4 @@
+import bs58 from "bs58";
 import {
   Transaction,
   type BlockhashWithExpiryBlockHeight,
@@ -12,6 +13,7 @@ export interface SendOptions {
   extraSigners?: Keypair[];
   blockhash?: BlockhashWithExpiryBlockHeight;
   skipPreflight?: boolean;
+  onSigned?: (signature: string) => void | Promise<void>;
 }
 
 export async function signAndSend(
@@ -26,6 +28,10 @@ export async function signAndSend(
   const signers = [signer, ...(opts.extraSigners ?? [])];
   if (tx instanceof Transaction) tx.partialSign(...signers);
   else tx.sign(signers);
+
+  const signed = tx instanceof Transaction ? tx.signature : tx.signatures[0];
+  if (!signed) throw new Error("transaction has no signature after signing");
+  await opts.onSigned?.(bs58.encode(signed));
 
   const raw = tx.serialize();
   const signature = await connection.sendRawTransaction(raw, {

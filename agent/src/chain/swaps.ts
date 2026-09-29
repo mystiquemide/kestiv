@@ -53,23 +53,45 @@ export function parseSwap(tx: ParsedTransactionWithMeta, mint: string): SwapEven
   };
 }
 
-const CHUNK = 25;
+export interface FetchOptions {
+  chunkSize?: number;
+  delayMs?: number;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchChunk(connection: Connection, sigs: string[]): Promise<(ParsedTransactionWithMeta | null)[]> {
   const opts = { maxSupportedTransactionVersion: 0, commitment: "confirmed" as const };
   try {
     return await connection.getParsedTransactions(sigs, opts);
   } catch {
-    return Promise.all(sigs.map((s) => connection.getParsedTransaction(s, opts).catch(() => null)));
+    let errors = 0;
+    const txs = await Promise.all(
+      sigs.map((s) =>
+        connection.getParsedTransaction(s, opts).catch(() => {
+          errors++;
+          return null;
+        }),
+      ),
+    );
+    if (errors === sigs.length) throw new Error("rpc unavailable while fetching transactions");
+    return txs;
   }
 }
 
-export async function recentSwaps(connection: Connection, mint: PublicKey, limit: number): Promise<SwapEvent[]> {
+export async function recentSwaps(
+  connection: Connection,
+  mint: PublicKey,
+  limit: number,
+  fetchOpts: FetchOptions = {},
+): Promise<SwapEvent[]> {
+  const chunk = fetchOpts.chunkSize ?? 25;
   const infos = await connection.getSignaturesForAddress(mint, { limit }, "confirmed");
   const sigs = infos.filter((i) => !i.err).map((i) => i.signature);
   const out: SwapEvent[] = [];
-  for (let i = 0; i < sigs.length; i += CHUNK) {
-    const txs = await fetchChunk(connection, sigs.slice(i, i + CHUNK));
+  for (let i = 0; i < sigs.length; i += chunk) {
+    if (i > 0 && fetchOpts.delayMs) await sleep(fetchOpts.delayMs);
+    const txs = await fetchChunk(connection, sigs.slice(i, i + chunk));
     for (const tx of txs) {
       const swap = tx ? parseSwap(tx, mint.toBase58()) : null;
       if (swap) out.push(swap);
