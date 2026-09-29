@@ -12,12 +12,21 @@ export const ENV_VARS = [
   "JUPITER_API_KEY",
   "USEPOD_MODEL",
   "STATUS_PORT",
+  "SOLANA_CLUSTER",
+  "SOLANA_RPC_URL",
 ] as const;
 
 export type EnvVar = (typeof ENV_VARS)[number];
 export type EnvSource = Record<string, string | undefined>;
 
-const OPTIONAL_VARS: readonly EnvVar[] = ["JUPITER_API_KEY", "USEPOD_MODEL", "STATUS_PORT"];
+const OPTIONAL_VARS: readonly EnvVar[] = [
+  "HELIUS_API_KEY",
+  "JUPITER_API_KEY",
+  "USEPOD_MODEL",
+  "STATUS_PORT",
+  "SOLANA_CLUSTER",
+  "SOLANA_RPC_URL",
+];
 
 export class ConfigError extends Error {
   readonly missing: string[];
@@ -51,13 +60,34 @@ const schema = z.object({
   FOUNDER_WALLET: pubkey,
   KESTIV_MINT: pubkey,
   CLAWPUMP_API_KEY: nonEmpty,
-  HELIUS_API_KEY: nonEmpty,
+  HELIUS_API_KEY: nonEmpty.optional(),
   JUPITER_API_KEY: nonEmpty.optional(),
   USEPOD_MODEL: nonEmpty.default("deepseek-v4-flash"),
   STATUS_PORT: z.coerce.number().int().min(1).max(65535).default(8787),
+  SOLANA_CLUSTER: z.enum(["mainnet-beta", "devnet"]).default("mainnet-beta"),
+  SOLANA_RPC_URL: z.url().optional(),
 });
 
 export type Config = z.infer<typeof schema>;
+export type Cluster = Config["SOLANA_CLUSTER"];
+export type RpcKind = "custom" | "helius" | "public";
+
+const PUBLIC_RPC: Record<Cluster, string> = {
+  "mainnet-beta": "https://api.mainnet-beta.solana.com",
+  devnet: "https://api.devnet.solana.com",
+};
+
+export function resolveRpc(cfg: Pick<Config, "SOLANA_CLUSTER" | "SOLANA_RPC_URL" | "HELIUS_API_KEY">): {
+  url: string;
+  kind: RpcKind;
+} {
+  if (cfg.SOLANA_RPC_URL) return { url: cfg.SOLANA_RPC_URL, kind: "custom" };
+  if (cfg.HELIUS_API_KEY) {
+    const host = cfg.SOLANA_CLUSTER === "devnet" ? "devnet" : "mainnet";
+    return { url: `https://${host}.helius-rpc.com/?api-key=${cfg.HELIUS_API_KEY}`, kind: "helius" };
+  }
+  return { url: PUBLIC_RPC[cfg.SOLANA_CLUSTER], kind: "public" };
+}
 
 export function readEnv(base: EnvSource = process.env): EnvSource {
   const file = base.KESTIV_ENV_FILE || ".env";
@@ -92,6 +122,8 @@ export function inspectEnv(env: EnvSource = readEnv()): Record<EnvVar, VarState>
     if (value === undefined) out[name] = "missing";
     else if ((name === "FOUNDER_WALLET" || name === "KESTIV_MINT") && !isPubkey(value)) out[name] = "invalid";
     else if (name === "STATUS_PORT" && !schema.shape.STATUS_PORT.safeParse(value).success) out[name] = "invalid";
+    else if (name === "SOLANA_CLUSTER" && !schema.shape.SOLANA_CLUSTER.safeParse(value).success) out[name] = "invalid";
+    else if (name === "SOLANA_RPC_URL" && !schema.shape.SOLANA_RPC_URL.safeParse(value).success) out[name] = "invalid";
     else out[name] = "set";
   }
   return out;

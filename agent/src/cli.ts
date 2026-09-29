@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { ENV_VARS, inspectEnv, isOptionalVar, readEnv } from "./config.js";
+import { ENV_VARS, inspectEnv, isOptionalVar, readEnv, resolveRpc, type Cluster } from "./config.js";
 import { Store, resolveDbPath } from "./store/index.js";
 
 const SLICE_STATUSES = ["pending", "bought", "locked", "failed"] as const;
@@ -13,8 +13,17 @@ function status(): void {
     console.log(`  ${name.padEnd(20)} ${states[name]}${suffix}`);
   }
 
+  const env = readEnv();
+  const cluster: Cluster = env.SOLANA_CLUSTER === "devnet" ? "devnet" : "mainnet-beta";
+  const rpc = resolveRpc({
+    SOLANA_CLUSTER: cluster,
+    SOLANA_RPC_URL: states.SOLANA_RPC_URL === "set" ? env.SOLANA_RPC_URL : undefined,
+    HELIUS_API_KEY: env.HELIUS_API_KEY,
+  });
+  console.log(`\nCluster   ${cluster} (rpc: ${rpc.kind})`);
+
   const dbPath = resolveDbPath();
-  console.log(`\nDatabase  ${dbPath}`);
+  console.log(`Database  ${dbPath}`);
   const store = Store.open(dbPath);
   try {
     const counts = store.sliceCountsByStatus();

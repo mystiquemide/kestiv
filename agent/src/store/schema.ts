@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS forwards (
 );
 CREATE TABLE IF NOT EXISTS slices (
   id TEXT PRIMARY KEY,
-  status TEXT CHECK(status IN ('pending','bought','locked','failed')),
+  status TEXT NOT NULL CHECK(status IN ('pending','bought','locked','failed')),
   sol_in INTEGER,
   tokens_out TEXT,
   buy_sig TEXT,
