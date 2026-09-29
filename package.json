@@ -1,0 +1,11 @@
+{
+  "name": "kestiv",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "workspaces": ["agent", "web"],
+  "scripts": {
+    "test": "npm test -w agent",
+    "build": "npm run build -w agent && npm run build -w web",
+    "lint": "npm run lint -w web"
+  }
+}
