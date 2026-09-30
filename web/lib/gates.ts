@@ -108,3 +108,58 @@ export function gateView(g: Gate): GateView {
 }
 
 export const KNOWN_GATES = [...Object.keys(SPECS), "swaps_last_6h"];
+
+const VERDICT_RULE = "UsePod doesn't flag the trading as circular or concentrated";
+const MARKET_RULE = "A live price and pool liquidity";
+
+/**
+ * One plain sentence per gate, using the run's own thresholds. Null for gates we don't describe.
+ * Several gates can share a sentence (price and liquidity), so callers should dedupe.
+ */
+export function gateRule(g: Gate): string | null {
+  const t = Number(g.threshold);
+  const trades = TRADES.exec(g.name);
+  if (trades) return `At least ${formatInt(t)} trades in the last ${trades[1]} hours`;
+  switch (g.name) {
+    case "holders":
+      return `At least ${formatInt(t)} holders`;
+    case "volume_24h_usd":
+      return `At least ${formatUsd(t)} traded in the last 24 hours`;
+    case "price_impact":
+      return `The buy moves the price less than ${formatFractionPct(t)}`;
+    case "spot_over_vwap":
+      return `The price is no more than ${Number(t.toFixed(2))}x its 6 hour average`;
+    case "slice_lamports":
+      return `At least ${solFromLamports(t)} SOL to spend`;
+    case "cap": {
+      const of = /\(([^)]*)\)/.exec(String(g.threshold))?.[1];
+      return of ? `The stake is under ${of}` : "The stake is under the cap";
+    }
+    case "cooldown_sec_left":
+      return "Enough time since the last buy";
+    case "price_usd":
+    case "liquidity_usd":
+      return MARKET_RULE;
+    case "usepod_quote_lamports":
+      return `UsePod's check costs no more than ${solTiny(t)} SOL`;
+    case "usepod_verdict":
+    case "usepod":
+      return VERDICT_RULE;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The buy rules, in the order the agent evaluates them. The UsePod verdict is always listed: the agent requires
+ * a "buy" verdict (decide.ts, gate "usepod_verdict") but a dry run never pays for it, so it may be missing from the gates.
+ */
+export function buyRules(gates: Gate[]): string[] {
+  const rules: string[] = [];
+  for (const g of gates) {
+    const r = gateRule(g);
+    if (r && !rules.includes(r)) rules.push(r);
+  }
+  if (!rules.includes(VERDICT_RULE)) rules.push(VERDICT_RULE);
+  return rules;
+}

@@ -1,8 +1,13 @@
 import { HeroBand } from "@/components/hero/HeroBand";
+import { BuiltOn } from "@/components/built/BuiltOn";
 import { HowItWorks } from "@/components/how/HowItWorks";
+import { Protection } from "@/components/protect/Protection";
+import { WhiteSheet } from "@/components/sheet/WhiteSheet";
+import { WhoItsFor } from "@/components/who/WhoItsFor";
 import { getDevnetProof, getMintSupply, getStakeView, type DevnetProof } from "@/lib/chain";
 import { serverEnv } from "@/lib/env";
 import { agentPanel, lockPanel, stakePanel } from "@/lib/hero";
+import { protectionModel } from "@/lib/protection";
 import { buyCard, checksCard, feesCard, lockCard } from "@/lib/howItWorks";
 import { getAgentStatus } from "@/lib/status";
 import { nowSec } from "@/lib/time";
@@ -31,12 +36,17 @@ export default async function Home() {
         agent={agentPanel(status, now)}
         lock={lockPanel(stake, proof)}
       />
-      <HowItWorks
-        fees={feesCard(status, now)}
-        checks={checksCard(status)}
-        buy={buyCard(status, quoteDecimals)}
-        lock={lockCard(stake, proof, liveStake, devnetDecimals)}
-      />
+      <WhiteSheet>
+        <HowItWorks
+          fees={feesCard(status, now)}
+          checks={checksCard(status)}
+          buy={buyCard(status, quoteDecimals)}
+          lock={lockCard(stake, proof, liveStake, devnetDecimals)}
+        />
+        <WhoItsFor />
+        <Protection model={protectionModel({ status, stake, proof, repoUrl: env.repoUrl })} />
+        <BuiltOn />
+      </WhiteSheet>
     </main>
   );
 }

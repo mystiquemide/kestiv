@@ -2,6 +2,7 @@ import { Check, CircleAlert, X } from "lucide-react";
 import type { BuyCard, ChecksCard, FeesCard, LockCard } from "@/lib/howItWorks";
 import { ExternalLink } from "../hero/Panel";
 import { TimeAgo } from "../hero/TimeAgo";
+import { SectionHeading } from "../sheet/SectionHeading";
 import { Card, InnerHeader } from "./Card";
 import { StaircaseChart } from "./Staircase";
 
@@ -139,12 +140,9 @@ function LockData({ card }: { card: LockCard }) {
 
 export function HowItWorks({ fees, checks, buy, lock }: HowModels) {
   return (
-    <section id="how-it-works" className="relative z-10 -mt-[60px] rounded-t-[60px] bg-canvas pt-[120px] pb-24">
-      <div className="container-k">
-        <p className="text-eyebrow text-helper">How it works</p>
-        <h2 className="mt-4 text-h2">Four steps, all onchain</h2>
-
-        <div className="mt-14 grid gap-4 lg:grid-cols-2">
+    <section id="how-it-works">
+      <SectionHeading eyebrow="How it works" title="Four steps, all onchain" />
+      <div className="mt-14 grid gap-4 lg:grid-cols-2">
           <Card n={1} title="Fees come in" text={fees.text} wide>
             <FeesData card={fees} />
           </Card>
@@ -157,7 +155,6 @@ export function HowItWorks({ fees, checks, buy, lock }: HowModels) {
           <Card n={4} title="It locks it for the founder" text={lock.text}>
             <LockData card={lock} />
           </Card>
-        </div>
       </div>
     </section>
   );
