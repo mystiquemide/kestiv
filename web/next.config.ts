@@ -1,12 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      { source: "/faq", destination: "/" },
-      { source: "/verify", destination: "/" },
-    ];
-  },
   async headers() {
     return [
       {
