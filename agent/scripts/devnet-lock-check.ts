@@ -1,5 +1,6 @@
 // Devnet proof of the founder vesting lock. Sends devnet transactions only.
-// run: KESTIV_ENV_FILE=/path/to/env npx tsx scripts/devnet-lock-check.ts
+// run: KESTIV_ENV_FILE=/path/to/env npx tsx scripts/devnet-lock-check.ts [--stream <id>] [--probe-flags]
+// --stream <id> skips mint/create/topup and checks an existing stream (read, terms, onchain cancel attempt).
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -34,6 +35,11 @@ const check = (ok: boolean, label: string) => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}`);
   if (!ok) process.exitCode = 1;
 };
+
+const argv = process.argv.slice(2);
+const streamArgIdx = argv.indexOf("--stream");
+const existingStream = streamArgIdx >= 0 ? argv[streamArgIdx + 1] : undefined;
+if (streamArgIdx >= 0 && !existingStream) throw new Error("--stream needs a stream id");
 
 const env = readEnv();
 const founder = env.FOUNDER_WALLET;
@@ -75,6 +81,66 @@ async function ensureFunds(minSol: number) {
   throw new Error(`devnet airdrop failed after retries: ${lastError}`);
 }
 
+
+async function attemptOnchainCancel(streamId: string, ctx: { connection: typeof connection; cluster: typeof chain.cluster }) {
+  const before = await readFounderVesting(connection, chain.cluster, streamId);
+  const built = await cancel({ id: streamId }, { publicKey: payer.publicKey }, sdkEnv(ctx));
+  const { transaction, blockhashWithExpiryBlockHeight } = await buildTransaction(built.instructions, { feePayer: payer.publicKey }, sdkEnv(ctx));
+  let signature = "";
+  let sendError = "";
+  try {
+    await signAndSend(transaction, payer, connection, ALLOWED_PROGRAMS, {
+      blockhash: blockhashWithExpiryBlockHeight,
+      skipPreflight: true,
+      onSigned: (sig) => {
+        signature = sig;
+      },
+    });
+    check(false, `cancel unexpectedly succeeded: ${tx(signature)}`);
+  } catch (e) {
+    sendError = e instanceof Error ? e.message.replace(/api-key=[^&\s"']+/gi, "api-key=<redacted>") : String(e);
+  }
+  if (!signature) throw new Error(`cancel was never signed: ${sendError}`);
+  console.log(`cancel attempt (skipPreflight, sent onchain): ${tx(signature)}`);
+
+  let landed: Awaited<ReturnType<typeof connection.getTransaction>> = null;
+  for (let i = 0; i < 20 && !landed; i++) {
+    landed = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 });
+    if (!landed) await sleep(1500);
+  }
+  if (!landed) throw new Error(`cancel tx ${signature} never appeared onchain (dropped?), stopping`);
+  const err = landed.meta?.err as { InstructionError?: [number, { Custom?: number }] } | null | undefined;
+  const custom = err?.InstructionError?.[1]?.Custom;
+  console.log(`  onchain err: ${JSON.stringify(err)}  slot ${landed.slot}`);
+  check(custom === 131, "cancel landed onchain and failed with InstructionError Custom(131) (Unauthorized)");
+
+  const after = await readFounderVesting(connection, chain.cluster, streamId);
+  check(!after.closed, "stream is not closed after the attempt");
+  check(after.depositedAmount === before.depositedAmount, `deposited unchanged (${after.depositedAmount})`);
+  check(after.recipient === before.recipient, "recipient unchanged");
+  check(after.withdrawnAmount === before.withdrawnAmount, "withdrawn unchanged");
+  return signature;
+}
+
+const ctx = { connection, cluster: chain.cluster };
+
+if (existingStream) {
+  const s = await readFounderVesting(connection, chain.cluster, existingStream);
+  console.log(`stream ${existingStream}  mint ${s.mint}  deposited ${s.depositedAmount}`);
+  let ok = true;
+  try {
+    assertLockTerms(s, { recipient: recipient.toBase58(), mint: s.mint, sender: payer.publicKey.toBase58() });
+  } catch (e) {
+    ok = false;
+    console.log(String(e));
+  }
+  check(ok, "flags and recipient match founder terms (recipient == FOUNDER_WALLET)");
+  console.log(`  start ${new Date(s.start * 1000).toISOString()}  end ${new Date(s.end * 1000).toISOString()}  flags ${JSON.stringify(s.flags)}`);
+  await attemptOnchainCancel(existingStream, ctx);
+  console.log(process.exitCode ? "\nRESULT: FAILED" : "\nRESULT: OK");
+  process.exit(process.exitCode ?? 0);
+}
+
 await ensureFunds(1);
 console.log(`balance ${(await connection.getBalance(payer.publicKey)) / LAMPORTS_PER_SOL} SOL`);
 
@@ -83,7 +149,6 @@ const ata = await getOrCreateAssociatedTokenAccount(connection, payer, mint, pay
 const mintSig = await mintTo(connection, payer, mint, ata.address, payer, 1_000_000n * UNIT, [], { commitment: "confirmed" });
 console.log(`mint ${mint.toBase58()}  minted 1,000,000: ${tx(mintSig)}`);
 
-const ctx = { connection, cluster: chain.cluster };
 const amount = 100_000n * UNIT;
 const before = Math.floor(Date.now() / 1000);
 const { streamId, signature: createSig } = await createFounderVesting({
@@ -131,19 +196,7 @@ check(s2.end > s1.end, `end moved later (${new Date(s2.end * 1000).toISOString()
 check(JSON.stringify(s2.flags) === JSON.stringify(s1.flags), "flags unchanged");
 check(s2.recipient === s1.recipient && s2.start === s1.start && s2.amountPerPeriod === s1.amountPerPeriod, "recipient, start, rate unchanged");
 
-// cancel must fail
-try {
-  const built = await cancel({ id: streamId }, { publicKey: payer.publicKey }, sdkEnv(ctx));
-  const { transaction, blockhashWithExpiryBlockHeight } = await buildTransaction(built.instructions, { feePayer: payer.publicKey }, sdkEnv(ctx));
-  const sig = await signAndSend(transaction, payer, connection, ALLOWED_PROGRAMS, { blockhash: blockhashWithExpiryBlockHeight });
-  check(false, `cancel unexpectedly succeeded: ${tx(sig)}`);
-} catch (e) {
-  const msg = e instanceof Error ? e.message : String(e);
-  const logs = (e as { logs?: string[] }).logs?.filter((l) => /error|failed|custom program/i.test(l)).slice(0, 4);
-  console.log(`cancel rejected: ${msg.slice(0, 300)}`);
-  if (logs?.length) console.log(`  program logs: ${logs.join(" | ")}`);
-  check(true, "cancel by sender is rejected");
-}
+await attemptOnchainCancel(streamId, ctx);
 
 // layout probe: confirm the offsets used for canUpdateRate / pausable by creating a stream that enables them
 if (process.argv.includes("--probe-flags")) {
