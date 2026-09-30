@@ -85,6 +85,7 @@ describe("protection model", () => {
   it("claims only what was verified about the flags", () => {
     expect(CANCEL_TEXT).not.toMatch(/nobody can switch them back on/i);
     expect(CANCEL_TEXT).toContain("Cancel, pause and rate changes");
+    expect(CANCEL_TEXT).toContain("Kestiv's signer refuses the one Streamflow instruction that could turn it on");
   });
 
   it("shows the code link only when a repo URL is set", () => {

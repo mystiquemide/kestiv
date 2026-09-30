@@ -22,3 +22,15 @@ export const ALLOWED_PROGRAMS: ReadonlyMap<string, string> = new Map([
 ]);
 
 export type Allowlist = ReadonlySet<string> | ReadonlyMap<string, string>;
+
+// Anchor discriminators (first 8 bytes of instruction data) of the only Streamflow instructions the agent builds.
+// Read from the instructions the SDK's create() and topup() return (asserted in test/streamflow-guard.test.ts).
+// Every other Streamflow instruction (update, cancel, transfer, pause, withdraw, ...) is refused at signing:
+// update could switch transferableByRecipient on after creation.
+export const STREAMFLOW_CREATE_DISCRIMINATOR = "181ec828051c0777";
+export const STREAMFLOW_TOPUP_DISCRIMINATOR = "7e2a314ee197634d";
+export const STREAMFLOW_ALLOWED_DISCRIMINATORS: ReadonlySet<string> = new Set([
+  STREAMFLOW_CREATE_DISCRIMINATOR,
+  STREAMFLOW_TOPUP_DISCRIMINATOR,
+]);
+export const STREAMFLOW_PROGRAM_IDS: ReadonlySet<string> = new Set([STREAMFLOW_PROGRAM_ID.mainnet, STREAMFLOW_PROGRAM_ID.devnet]);

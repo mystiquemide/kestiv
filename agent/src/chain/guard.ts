@@ -1,5 +1,5 @@
 import type { Transaction, VersionedTransaction } from "@solana/web3.js";
-import type { Allowlist } from "./allowlist.js";
+import { STREAMFLOW_ALLOWED_DISCRIMINATORS, STREAMFLOW_PROGRAM_IDS, type Allowlist } from "./allowlist.js";
 
 export class DisallowedProgramError extends Error {
   readonly programId: string;
@@ -11,6 +11,25 @@ export class DisallowedProgramError extends Error {
     this.programId = programId;
     this.instructionIndex = instructionIndex;
   }
+}
+
+export class DisallowedStreamflowInstructionError extends DisallowedProgramError {
+  readonly discriminator: string;
+
+  constructor(programId: string, instructionIndex: number, discriminator: string) {
+    super(programId, instructionIndex);
+    this.message = `instruction ${instructionIndex} calls Streamflow with discriminator ${discriminator}, only create and top-up are allowed`;
+    this.name = "DisallowedStreamflowInstructionError";
+    this.discriminator = discriminator;
+  }
+}
+
+function topLevelInstructions(tx: VersionedTransaction | Transaction): { programId: string; data: Uint8Array }[] {
+  if ("message" in tx) {
+    const ids = topLevelProgramIds(tx);
+    return tx.message.compiledInstructions.map((ix, i) => ({ programId: ids[i]!, data: ix.data }));
+  }
+  return tx.instructions.map((ix) => ({ programId: ix.programId.toBase58(), data: ix.data }));
 }
 
 export function topLevelProgramIds(tx: VersionedTransaction | Transaction): string[] {
@@ -27,7 +46,11 @@ export function topLevelProgramIds(tx: VersionedTransaction | Transaction): stri
 
 export function assertAllowedPrograms(tx: VersionedTransaction | Transaction, allowlist: Allowlist): void {
   const has = (id: string) => (allowlist instanceof Map ? allowlist.has(id) : (allowlist as ReadonlySet<string>).has(id));
-  topLevelProgramIds(tx).forEach((id, i) => {
-    if (!has(id)) throw new DisallowedProgramError(id, i);
+  topLevelInstructions(tx).forEach(({ programId, data }, i) => {
+    if (!has(programId)) throw new DisallowedProgramError(programId, i);
+    if (STREAMFLOW_PROGRAM_IDS.has(programId)) {
+      const discriminator = Buffer.from(data.subarray(0, 8)).toString("hex");
+      if (!STREAMFLOW_ALLOWED_DISCRIMINATORS.has(discriminator)) throw new DisallowedStreamflowInstructionError(programId, i, discriminator);
+    }
   });
 }

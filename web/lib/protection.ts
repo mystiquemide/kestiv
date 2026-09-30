@@ -26,10 +26,11 @@ export interface ProtectionModel {
     | { kind: "empty"; heading: string; text: string; message: string };
 }
 
-// Verified on devnet: Streamflow's update instruction cannot enable cancel, pause or rate changes, and the sender
-// could not enable transfer by the sender. It can enable transfer by the recipient, so transfer is not claimed as permanent.
+// Verified on devnet: Streamflow's update instruction cannot enable cancel, pause or rate changes. It can enable
+// transfer by the recipient, so the agent's signer refuses every Streamflow instruction except create and top-up
+// (agent/src/chain/guard.ts).
 export const CANCEL_TEXT =
-  "Cancel, pause and rate changes are all switched off when the contract is created, and Streamflow has no way to switch them on later. Transfer starts off too. These are read live from the contract.";
+  "Cancel, pause and rate changes are switched off when the contract is created, and Streamflow has no way to switch them on later. Transfer starts off too, and Kestiv's signer refuses the one Streamflow instruction that could turn it on.";
 
 export function protectionModel(args: {
   status: AgentStatus;
