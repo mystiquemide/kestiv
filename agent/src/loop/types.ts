@@ -2,7 +2,7 @@ import type { Transaction, VersionedTransaction } from "@solana/web3.js";
 import type { TokenPrice } from "../clawpump/price.js";
 import type { MintInfo } from "../chain/reads.js";
 import type { SwapEvent } from "../chain/swaps.js";
-import type { FounderVesting } from "../lock/read.js";
+import type { FounderLock } from "../lock/read.js";
 import type { Policy } from "../policy.js";
 import type { Store } from "../store/index.js";
 import type { BuiltSwap, SwapQuote } from "../swap/jupiter.js";
@@ -34,9 +34,9 @@ export interface SendOpts {
 }
 
 export interface LockPort {
-  create(amount: bigint): Promise<{ streamId: string; signature: string }>;
-  topup(streamId: string, amount: bigint): Promise<{ signature: string }>;
-  read(streamId: string): Promise<FounderVesting>;
+  /** Locks `amount` tokens in a new lock for the founder. A lock cannot be topped up, so every buy gets its own. */
+  create(amount: bigint): Promise<{ lockId: string; signature: string; deposited: bigint }>;
+  read(lockId: string): Promise<FounderLock>;
   expected: { recipient: string; mint: string; sender: string };
 }
 

@@ -23,10 +23,22 @@ describe("store", () => {
     s.setConfig("mint", "A");
     expect(() => s.setConfig("mint", "B")).toThrow(WriteOnceError);
     expect(s.getConfig("mint")).toBe("A");
-    for (const key of ["founder", "contract_id", "vesting_terms"]) {
+    for (const key of ["founder", "vesting_terms"]) {
       s.setConfig(key, "1");
       expect(() => s.setConfig(key, "2")).toThrow(WriteOnceError);
     }
+  });
+
+  it("keeps every lock the agent created, oldest first, and ignores a duplicate", () => {
+    const s = Store.open(":memory:");
+    expect(s.allLocks()).toEqual([]);
+    s.addLock({ escrow: "B", sig: "S2", amount: "20", ts: 200 });
+    s.addLock({ escrow: "A", sig: "S1", amount: "10", ts: 100 });
+    s.addLock({ escrow: "A", sig: "S1x", amount: "99", ts: 999 });
+    expect(s.allLocks()).toEqual([
+      { escrow: "A", sig: "S1", amount: "10", ts: 100 },
+      { escrow: "B", sig: "S2", amount: "20", ts: 200 },
+    ]);
   });
 
   it("allows updating other config keys", () => {

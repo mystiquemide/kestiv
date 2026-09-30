@@ -16,7 +16,8 @@ export interface Policy {
   cooldownMinSec: number;
   cooldownMaxSec: number;
   opsReserveLamports: number;
-  contractCreationLamports: number;
+  /** SOL reserved for each new lock: rent for its accounts plus the network fee. Measured at about 0.0048 SOL. */
+  lockRentLamports: number;
   maxUsepodLamports: number;
   maxPriorityFeeLamports: number;
   swapsForSignals: number;
@@ -38,7 +39,7 @@ export const DEFAULT_POLICY: Policy = {
   cooldownMinSec: 30 * 60,
   cooldownMaxSec: 90 * 60,
   opsReserveLamports: 20_000_000,
-  contractCreationLamports: 180_000_000,
+  lockRentLamports: 6_000_000,
   maxUsepodLamports: 300_000,
   maxPriorityFeeLamports: 1_000_000,
   swapsForSignals: 200,
@@ -62,7 +63,7 @@ const overrideSchema = z
     cooldownMinSec: num.int().min(0),
     cooldownMaxSec: num.int().min(0),
     opsReserveLamports: num.int().min(0),
-    contractCreationLamports: num.int().min(0),
+    lockRentLamports: num.int().min(0),
     maxUsepodLamports: num.int().min(0),
     maxPriorityFeeLamports: num.int().min(0),
     swapsForSignals: num.int().min(1),

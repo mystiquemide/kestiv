@@ -2,7 +2,7 @@ import { type VersionedTransaction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SwapEvent } from "../src/chain/swaps.js";
-import { REQUIRED_FLAGS, type FounderVesting } from "../src/lock/read.js";
+import type { FounderLock } from "../src/lock/read.js";
 import { runOnce } from "../src/loop/run.js";
 import type { IncomingTransfer, Ports, SigState } from "../src/loop/types.js";
 import { DEFAULT_POLICY } from "../src/policy.js";
@@ -17,21 +17,24 @@ const FEE_SRC = "CLAWPUMP_FORWARDER";
 const swaps = (): SwapEvent[] =>
   Array.from({ length: 10 }, (_, i) => ({ sig: `s${i}`, ts: NOW - 600 * (i + 1), wallet: `w${i % 4}`, side: i % 2 ? "sell" : "buy", tokenAmount: 1_000_000_000n, solAmount: 100_000_000 }));
 
-const vesting = (over: Partial<FounderVesting> = {}, flags: Partial<FounderVesting["flags"]> = {}): FounderVesting => ({
-  streamId: "STREAM",
+const lockOf = (over: Partial<FounderLock> = {}): FounderLock => ({
+  escrow: "LOCK1",
   recipient: FOUNDER,
-  sender: WALLET,
   mint: MINT,
-  depositedAmount: 0n,
-  withdrawnAmount: 0n,
-  start: 1,
-  end: 2,
-  period: 86400,
+  creator: WALLET,
+  base: "BASE",
+  updateRecipientMode: 0,
+  cancelMode: 0,
+  tokenProgramFlag: 0,
+  cliffTime: 90n * 86_400n + 1n,
+  frequency: 86_400n,
+  cliffUnlockAmount: 0n,
   amountPerPeriod: 1n,
-  cliff: 1,
-  cliffAmount: 0n,
-  closed: false,
-  flags: { ...REQUIRED_FLAGS, ...flags },
+  numberOfPeriod: 365n,
+  totalClaimedAmount: 0n,
+  vestingStartTime: 1n,
+  cancelledAt: 0n,
+  deposited: 0n,
   ...over,
 });
 
@@ -39,7 +42,7 @@ interface Harness {
   ports: Ports;
   store: Store;
   calls: string[];
-  state: { tokens: bigint; sol: number; incoming: IncomingTransfer[]; sig: Record<string, SigState>; height: number; stream: FounderVesting };
+  state: { tokens: bigint; sol: number; incoming: IncomingTransfer[]; sig: Record<string, SigState>; height: number; locks: Record<string, FounderLock> };
 }
 
 function harness(over: Partial<Ports> = {}): Harness {
@@ -51,7 +54,7 @@ function harness(over: Partial<Ports> = {}): Harness {
     incoming: [] as IncomingTransfer[],
     sig: {} as Record<string, SigState>,
     height: 100,
-    stream: vesting(),
+    locks: {} as Record<string, FounderLock>,
   };
   const ports: Ports = {
     dry: false,
@@ -78,14 +81,16 @@ function harness(over: Partial<Ports> = {}): Harness {
     lock: {
       create: async (a) => {
         calls.push(`lock.create:${a}`);
-        state.sol -= 180_000_000;
-        return { streamId: "STREAM", signature: "LOCKSIG" };
+        state.sol -= 6_000_000;
+        const lockId = `LOCK${Object.keys(state.locks).length + 1}`;
+        state.locks[lockId] = lockOf({ escrow: lockId, deposited: a });
+        return { lockId, signature: "LOCKSIG", deposited: a };
       },
-      topup: async (id, a) => {
-        calls.push(`lock.topup:${id}:${a}`);
-        return { signature: "TOPSIG" };
+      read: async (id) => {
+        const l = state.locks[id];
+        if (!l) throw new Error(`lock ${id} not found`);
+        return l;
       },
-      read: async () => state.stream,
       expected: { recipient: FOUNDER, mint: MINT, sender: WALLET },
     },
     usepod: { verdict: async () => ({ outcome: "ok", verdict: "buy", reason: "organic", quote: { quoteId: "q", network: "n", payTo: "p", lamports: 100 } }) },
@@ -109,6 +114,11 @@ function harness(over: Partial<Ports> = {}): Harness {
   return { ports, store, calls, state };
 }
 
+function withLock(over: Partial<FounderLock> = {}, id = "LOCK1") {
+  h.state.locks[id] = lockOf({ escrow: id, ...over });
+  h.store.addLock({ escrow: id, sig: `SIG-${id}`, amount: String(over.deposited ?? 0n), ts: 1 });
+}
+
 let h: Harness;
 beforeEach(() => {
   h = harness();
@@ -120,17 +130,19 @@ describe("runOnce buy path", () => {
     const r = await runOnce(h.ports);
     expect(r).toMatchObject({ state: "BOUGHT", reason: "bought_and_locked" });
     expect(h.calls).toEqual(["send", "lock.create:5000000000"]);
-    expect(h.store.getConfig("contract_id")).toBe("STREAM");
+    expect(h.store.allLocks()).toHaveLength(1);
+    expect(h.store.allLocks()[0]).toMatchObject({ escrow: "LOCK1", sig: "LOCKSIG", amount: "5000000000" });
     const slice = h.store.db.prepare("SELECT * FROM slices").get() as { status: string; buy_sig: string; lock_sig: string; sol_in: number; last_valid_height: number };
     expect(slice).toMatchObject({ status: "locked", buy_sig: "BUYSIG", lock_sig: "LOCKSIG", sol_in: 500_000_000, last_valid_height: 500 });
     expect(Number(h.store.getConfig("cooldown_until"))).toBe(NOW + 30 * 60 + Math.floor(0.5 * 60 * 60));
     expect(h.store.lastRun()?.state).toBe("BOUGHT");
   });
 
-  it("tops up an existing contract after re-verifying its terms", async () => {
-    h.store.setConfig("contract_id", "STREAM");
+  it("gives the next buy its own new lock instead of topping up, after re-verifying the old one", async () => {
+    withLock({ deposited: 1_000_000_000n });
     await runOnce(h.ports);
-    expect(h.calls).toEqual(["send", "lock.topup:STREAM:5000000000"]);
+    expect(h.calls).toEqual(["send", "lock.create:5000000000"]);
+    expect(h.store.allLocks().map((l) => l.escrow)).toEqual(["LOCK1", "LOCK2"]);
   });
 
   it("does not buy a second time inside the cooldown", async () => {
@@ -158,8 +170,7 @@ describe("runOnce buy path", () => {
   });
 
   it("reports CAP_REACHED and releases unspent budget to the founder", async () => {
-    h.store.setConfig("contract_id", "STREAM");
-    h.state.stream = vesting({ depositedAmount: 70_000_000_000_000n });
+    withLock({ deposited: 70_000_000_000_000n });
     const r = await runOnce(h.ports);
     expect(r.state).toBe("CAP_REACHED");
     expect(h.calls.some((c) => c.startsWith(`transfer:${FOUNDER}`))).toBe(true);
@@ -170,48 +181,45 @@ describe("runOnce buy path", () => {
 describe("lock-first", () => {
   it("locks tokens already in the wallet before any buy", async () => {
     h.state.tokens = 123_000_000n;
-    h.store.setConfig("contract_id", "STREAM");
+    withLock({ deposited: 1n });
     const order: string[] = [];
     const send = h.ports.send!;
     h.ports.send = async (...a) => {
       order.push("buy");
       return send(...a);
     };
-    const topup = h.ports.lock.topup;
-    h.ports.lock.topup = async (...a) => {
+    const create = h.ports.lock.create;
+    h.ports.lock.create = async (...a) => {
       order.push("lock");
-      return topup(...a);
+      return create(...a);
     };
     await runOnce(h.ports);
     expect(order[0]).toBe("lock");
     expect(order).toContain("buy");
   });
 
-  it("waits when SOL cannot cover contract creation", async () => {
+  it("waits when SOL cannot cover a new lock", async () => {
     h.state.tokens = 10_000_000n;
-    h.state.sol = 100_000_000;
+    h.state.sol = 20_000_000;
     const r = await runOnce(h.ports);
-    expect(r).toMatchObject({ state: "WAITING", reason: "insufficient_sol_for_contract" });
+    expect(r).toMatchObject({ state: "WAITING", reason: "insufficient_sol_for_lock" });
     expect(h.calls).toEqual([]);
   });
 
-  it("refuses to top up a contract whose terms were tampered with", async () => {
-    h.state.tokens = 10_000_000n;
-    h.store.setConfig("contract_id", "STREAM");
-    h.state.stream = vesting({}, { cancelableBySender: true });
+  it("stops when an existing lock no longer has the founder terms", async () => {
+    withLock({ cancelMode: 1 });
     const r = await runOnce(h.ports);
     expect(r).toMatchObject({ state: "ERROR", reason: "lock_terms_violation" });
     expect(h.calls).toEqual([]);
   });
 
   it("marks bought slices locked after a lock", async () => {
-    h.store.setConfig("contract_id", "STREAM");
     h.store.insertPendingSlice("old", 1, 1);
     h.store.setSliceSignature("old", "OLDSIG", 10);
     h.store.updateSlice("old", { status: "bought" });
     h.state.tokens = 5_000_000n;
     await runOnce(h.ports);
-    expect(h.store.db.prepare("SELECT status, lock_sig FROM slices WHERE id='old'").get()).toEqual({ status: "locked", lock_sig: "TOPSIG" });
+    expect(h.store.db.prepare("SELECT status, lock_sig FROM slices WHERE id='old'").get()).toEqual({ status: "locked", lock_sig: "LOCKSIG" });
   });
 });
 
@@ -226,10 +234,9 @@ describe("pending slice recovery", () => {
     pending("SIG");
     h.state.sig.SIG = { state: "confirmed" };
     h.state.tokens = 7_000_000n;
-    h.store.setConfig("contract_id", "STREAM");
     await runOnce(h.ports);
     expect(status().status).toBe("locked");
-    expect(h.calls[0]).toBe("lock.topup:STREAM:7000000");
+    expect(h.calls[0]).toBe("lock.create:7000000");
   });
 
   it("failed -> failed with reason", async () => {

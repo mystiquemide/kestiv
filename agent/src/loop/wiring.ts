@@ -9,10 +9,8 @@ import { signAndSend } from "../chain/send.js";
 import { recentSwaps } from "../chain/swaps.js";
 import { fetchPrice, fetchSolUsd } from "../clawpump/price.js";
 import type { DryRunConfig } from "../config.js";
-import { createFounderVesting } from "../lock/create.js";
-import { depositForBalance, streamflowTokenFeePercent } from "../lock/fee.js";
-import { readFounderVesting } from "../lock/read.js";
-import { topupFounderVesting } from "../lock/topup.js";
+import { createFounderLock } from "../lock/create.js";
+import { readFounderLock } from "../lock/read.js";
 import type { Policy } from "../policy.js";
 import type { Store } from "../store/index.js";
 import { createJupiter } from "../swap/jupiter.js";
@@ -89,34 +87,16 @@ export function buildPorts(o: WiringOptions): Ports {
       build: (quote) => jupiter.buildSwap(quote, wallet),
     },
     lock: {
-      // `available` is every token the wallet holds. Streamflow charges its token fee on top of the deposit,
-      // so deposit only what leaves room for it, otherwise the transaction would fail for lack of tokens.
-      create: async (available) => {
-        const sender = requireKeypair(keypair);
-        const fee = await streamflowTokenFeePercent(connection, chain.cluster, sender.publicKey);
-        return createFounderVesting({
+      create: async (amount) =>
+        createFounderLock({
           connection,
-          cluster: chain.cluster,
-          sender,
+          sender: requireKeypair(keypair),
           mint,
           tokenProgram: (await getMint()).tokenProgram,
-          amount: depositForBalance(available, fee),
           recipient: founder,
-        });
-      },
-      topup: async (streamId, available) => {
-        const sender = requireKeypair(keypair);
-        const fee = await streamflowTokenFeePercent(connection, chain.cluster, sender.publicKey);
-        return topupFounderVesting({
-          connection,
-          cluster: chain.cluster,
-          sender,
-          streamId,
-          amount: depositForBalance(available, fee),
-          expected: { recipient: cfg.FOUNDER_WALLET, mint: o.mint },
-        });
-      },
-      read: (streamId) => readFounderVesting(connection, chain.cluster, streamId),
+          amount,
+        }),
+      read: (lockId) => readFounderLock(connection, lockId),
       expected: { recipient: cfg.FOUNDER_WALLET, mint: o.mint, sender: cfg.KESTIV_WALLET },
     },
     usepod: {

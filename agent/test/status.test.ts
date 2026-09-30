@@ -41,7 +41,7 @@ function seeded(): Store {
   s.updateSlice("a", { status: "bought", tokens_out: "777", ts: 101 });
   s.updateSlice("a", { status: "locked", lock_sig: "LOCK1", ts: 102 });
   s.insertPendingSlice("b", 60, 200);
-  s.setConfig("contract_id", "STREAM");
+  s.addLock({ escrow: "LOCK-A", sig: "LOCK1", amount: "777", ts: 102 });
   s.insertRun({ state: "WAITING", reason: "old", details: { dry: false, mint: "M", gates: [] }, txs: [], ts: 5 });
   s.insertRun({ state: "SKIPPED", reason: "usepod_skip", details: { dry: true, mint: "M2", gates: [], usepod: { outcome: "ok", verdict: "skip", reason: "circular", quoteLamports: 500, paymentSignature: "P", model: "m" } }, txs: ["T"], ts: 6 });
   return s;
@@ -58,10 +58,10 @@ describe("buildPublicStatus", () => {
       version: 1,
       wallet: "WALLETPUBKEY",
       founder: "FOUNDERPUBKEY",
-      contractId: "STREAM",
+      locks: [{ escrow: "LOCK-A", sig: "LOCK1", amount: "777", ts: 102 }],
       funding: { feeLamports: "400", seedLamports: "100", forwardedLamports: "200" },
       latest: { buySig: "BUY1", buyTs: 101, lockSig: "LOCK1", lockTs: 102 },
-      policy: { capBps: 700, minSliceLamports: 50_000_000, maxPriceImpact: 0.025, stakeShareBps: 5000 },
+      policy: { capBps: 700, minSliceLamports: 50_000_000, lockRentLamports: 6_000_000, maxPriceImpact: 0.025, stakeShareBps: 5000 },
     });
     expect(s.inflows.map((i) => i.sig)).toEqual(["i2", "i1"]);
     expect(s.slices.map((x) => x.id)).toEqual(["b", "a"]);
@@ -73,7 +73,7 @@ describe("buildPublicStatus", () => {
 
   it("returns nulls and empty lists for a fresh store", () => {
     const s = build(Store.open(":memory:"), { budget: undefined, details: {} });
-    expect(s).toMatchObject({ contractId: null, nextRunAt: null, stake: null, budget: null, gates: [], slices: [], inflows: [], runs: [] });
+    expect(s).toMatchObject({ locks: [], nextRunAt: null, stake: null, budget: null, gates: [], slices: [], inflows: [], runs: [] });
     expect(s.latest).toEqual({ buySig: null, buyTs: null, lockSig: null, lockTs: null });
     expect(s.funding).toEqual({ feeLamports: "0", seedLamports: "0", forwardedLamports: "0" });
   });

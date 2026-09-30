@@ -49,7 +49,8 @@ function status(): void {
   const store = Store.open(dbPath);
   try {
     console.log(`Mint      ${store.getConfig("mint") ?? "not initialised"}`);
-    console.log(`Contract  ${store.getConfig("contract_id") ?? "none yet"}`);
+    const locks = store.allLocks();
+    console.log(`Locks     ${locks.length === 0 ? "none yet" : `${locks.length} (latest ${locks[locks.length - 1]!.escrow})`}`);
     const counts = store.sliceCountsByStatus();
     console.log("Slices    " + SLICE_STATUSES.map((s) => `${s}=${counts[s] ?? 0}`).join(" "));
     const cooldown = Number(store.getConfig("cooldown_until") ?? 0);

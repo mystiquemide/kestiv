@@ -1,5 +1,5 @@
 import type { Transaction, VersionedTransaction } from "@solana/web3.js";
-import { STREAMFLOW_ALLOWED_DISCRIMINATORS, STREAMFLOW_PROGRAM_IDS, type Allowlist } from "./allowlist.js";
+import { LOCKER_ALLOWED_DISCRIMINATORS, LOCKER_PROGRAM_IDS, type Allowlist } from "./allowlist.js";
 
 export class DisallowedProgramError extends Error {
   readonly programId: string;
@@ -13,13 +13,13 @@ export class DisallowedProgramError extends Error {
   }
 }
 
-export class DisallowedStreamflowInstructionError extends DisallowedProgramError {
+export class DisallowedLockInstructionError extends DisallowedProgramError {
   readonly discriminator: string;
 
   constructor(programId: string, instructionIndex: number, discriminator: string) {
     super(programId, instructionIndex);
-    this.message = `instruction ${instructionIndex} calls Streamflow with discriminator ${discriminator}, only create and top-up are allowed`;
-    this.name = "DisallowedStreamflowInstructionError";
+    this.message = `instruction ${instructionIndex} calls Jupiter Lock with discriminator ${discriminator}, only creating a lock is allowed`;
+    this.name = "DisallowedLockInstructionError";
     this.discriminator = discriminator;
   }
 }
@@ -48,9 +48,9 @@ export function assertAllowedPrograms(tx: VersionedTransaction | Transaction, al
   const has = (id: string) => (allowlist instanceof Map ? allowlist.has(id) : (allowlist as ReadonlySet<string>).has(id));
   topLevelInstructions(tx).forEach(({ programId, data }, i) => {
     if (!has(programId)) throw new DisallowedProgramError(programId, i);
-    if (STREAMFLOW_PROGRAM_IDS.has(programId)) {
+    if (LOCKER_PROGRAM_IDS.has(programId)) {
       const discriminator = Buffer.from(data.subarray(0, 8)).toString("hex");
-      if (!STREAMFLOW_ALLOWED_DISCRIMINATORS.has(discriminator)) throw new DisallowedStreamflowInstructionError(programId, i, discriminator);
+      if (!LOCKER_ALLOWED_DISCRIMINATORS.has(discriminator)) throw new DisallowedLockInstructionError(programId, i, discriminator);
     }
   });
 }

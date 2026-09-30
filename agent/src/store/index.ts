@@ -3,7 +3,14 @@ import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import { ADDED_COLUMNS, SCHEMA_SQL } from "./schema.js";
 
-export const WRITE_ONCE_KEYS = ["mint", "founder", "contract_id", "vesting_terms"] as const;
+export const WRITE_ONCE_KEYS = ["mint", "founder", "vesting_terms"] as const;
+
+export interface LockRow {
+  escrow: string;
+  sig: string;
+  amount: string;
+  ts: number;
+}
 
 export const DEFAULT_DB_PATH = "./data/kestiv.db";
 
@@ -199,6 +206,15 @@ export class Store {
     return this.db
       .prepare("SELECT id, state, reason, ts, details, txs FROM runs ORDER BY id DESC LIMIT ?")
       .all(limit) as RunRow[];
+  }
+
+  addLock(row: LockRow): void {
+    this.db.prepare("INSERT OR IGNORE INTO locks(escrow, sig, amount, ts) VALUES(?,?,?,?)").run(row.escrow, row.sig, row.amount, row.ts);
+  }
+
+  /** Every lock the agent created, oldest first. Each one is read back from the chain before it is trusted. */
+  allLocks(): LockRow[] {
+    return this.db.prepare("SELECT escrow, sig, amount, ts FROM locks ORDER BY ts, rowid").all() as LockRow[];
   }
 
   slicesByStatus(status: SliceStatus): SliceRow[] {

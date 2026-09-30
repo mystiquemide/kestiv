@@ -1,5 +1,4 @@
-import BN from "bn.js";
-import { computeAmountPerPeriod } from "@streamflow/stream";
+import { type LockParams, MODE_NOBODY } from "./jupiter.js";
 
 const DAY = 86_400;
 
@@ -10,37 +9,30 @@ export const FOUNDER_TERMS = {
   cliffAmount: 0,
 } as const;
 
-export interface FounderSchedule {
-  start: number;
-  cliff: number;
-  period: number;
-  cliffAmount: BN;
-  amountPerPeriod: BN;
-}
+/** Number of daily unlocks after the cliff. */
+export const PERIODS = FOUNDER_TERMS.vestSeconds / FOUNDER_TERMS.periodSeconds;
+
+/** Tokens below this are dust: locking them would cost more in fees than they are worth, so they wait for the next buy. */
+export const DUST_TOKENS = 10_000n;
 
 /**
- * Intent: nothing is withdrawable for 90 days, then the stake releases linearly, once per day, over 365 days.
- *
- * Streamflow unlock rule (calculateUnlockedAmount): 0 before `cliff`, then
- * cliffAmount + floor((t - cliff) / period) * amountPerPeriod, capped at the deposit.
- * Mapping: start = cliff = createdAt + 90d, period = 86400, cliffAmount = 0 (no lump at the cliff),
- * amountPerPeriod = ceil(amount / 365). The contract end is derived on chain from the deposit and
- * amountPerPeriod, so a topup keeps the daily rate and pushes the end later.
+ * Intent: nothing unlocks for 90 days, then the stake releases in equal daily shares over 365 days.
+ * Jupiter Lock mapping: cliffTime = start + 90 days, no lump at the cliff, 365 periods of one day.
+ * amountPerPeriod rounds down, so the lock holds at most 364 raw units less than `amount`. Those stay in the wallet
+ * and are far below DUST_TOKENS.
+ * Who can cancel and who can re-point the recipient are both "nobody", fixed at creation.
  */
-export function founderSchedule(nowSec: number, amount: bigint): FounderSchedule {
-  if (amount <= 0n) throw new Error("amount must be positive");
-  const cliffAmount = new BN(FOUNDER_TERMS.cliffAmount);
-  const at = nowSec + FOUNDER_TERMS.cliffSeconds;
+export function founderLockParams(nowSec: number, amount: bigint): LockParams {
+  const perPeriod = amount / BigInt(PERIODS);
+  if (perPeriod <= 0n) throw new Error("amount is too small to lock");
   return {
-    start: at,
-    cliff: at,
-    period: FOUNDER_TERMS.periodSeconds,
-    cliffAmount,
-    amountPerPeriod: computeAmountPerPeriod(
-      new BN(amount.toString()),
-      cliffAmount,
-      FOUNDER_TERMS.vestSeconds,
-      FOUNDER_TERMS.periodSeconds,
-    ),
+    vestingStartTime: BigInt(nowSec),
+    cliffTime: BigInt(nowSec + FOUNDER_TERMS.cliffSeconds),
+    frequency: BigInt(FOUNDER_TERMS.periodSeconds),
+    cliffUnlockAmount: BigInt(FOUNDER_TERMS.cliffAmount),
+    amountPerPeriod: perPeriod,
+    numberOfPeriod: BigInt(PERIODS),
+    updateRecipientMode: MODE_NOBODY,
+    cancelMode: MODE_NOBODY,
   };
 }

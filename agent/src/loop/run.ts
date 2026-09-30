@@ -5,7 +5,7 @@ import { resolveVolume } from "./volume.js";
 import { computeBudget, stakeShare, type Budget } from "./budget.js";
 import { decide, type DecideInputs, type Decision } from "./decide.js";
 import type { Ports, RunResult, RunState } from "./types.js";
-import { DUST_TOKENS } from "../lock/fee.js";
+import { DUST_TOKENS } from "../lock/terms.js";
 
 const MIN_INFLOW_LAMPORTS = 10_000;
 const STALE_FORWARD_SEC = 180;
@@ -60,9 +60,13 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
 
     // cap state (needed before intake so capped fees go to the founder)
     const info = await ports.chain.mintInfo();
-    const contractId = store.getConfig("contract_id");
-    const stream = contractId ? await ports.lock.read(contractId) : undefined;
-    const stakeTokens = stream?.depositedAmount ?? 0n;
+    // The stake is everything in the locks the agent created, each one read back from the chain and checked first.
+    let stakeTokens = 0n;
+    for (const l of store.allLocks()) {
+      const lock = await ports.lock.read(l.escrow);
+      assertLockTerms(lock, ports.lock.expected);
+      stakeTokens += lock.deposited;
+    }
     const capTokens = (info.supply * BigInt(policy.capBps)) / 10_000n;
     const capReached = stakeTokens >= capTokens;
     details.stake = { stakeTokens: stakeTokens.toString(), capTokens: capTokens.toString(), supply: info.supply.toString() };
@@ -242,7 +246,7 @@ async function recoverPending(ports: Ports, details: Details): Promise<string[]>
   return still;
 }
 
-/** Returns a WAIT reason when locking is blocked, otherwise undefined. */
+/** Returns a WAIT reason when locking is blocked, otherwise undefined. Every lock is new: Jupiter Lock has no top-up. */
 async function lockTokens(
   ports: Ports,
   amount: bigint,
@@ -251,38 +255,27 @@ async function lockTokens(
   would: (line: string) => void,
 ): Promise<string | undefined> {
   const { store, policy, dry } = ports;
-  const contractId = store.getConfig("contract_id");
-  let signature: string | undefined;
 
-  if (!contractId) {
-    const sol = await ports.chain.solBalance();
-    if (sol < policy.contractCreationLamports + policy.opsReserveLamports) {
-      details.lockBlocked = { solLamports: sol, needed: policy.contractCreationLamports + policy.opsReserveLamports };
-      return "insufficient_sol_for_contract";
-    }
-    if (dry) {
-      would(`create the founder vesting contract and lock ${amount} tokens`);
-      return undefined;
-    }
-    const created = await ports.lock.create(amount);
-    store.setConfig("contract_id", created.streamId);
-    signature = created.signature;
-    const after = await ports.chain.solBalance();
-    if (sol > after) store.addExpense(signature, "contract_creation", sol - after, ports.now());
-    details.contractId = created.streamId;
-  } else {
-    const stream = await ports.lock.read(contractId);
-    assertLockTerms(stream, ports.lock.expected);
-    if (dry) {
-      would(`top up contract ${contractId} with ${amount} tokens`);
-      return undefined;
-    }
-    signature = (await ports.lock.topup(contractId, amount)).signature;
+  const sol = await ports.chain.solBalance();
+  const needed = policy.lockRentLamports + policy.opsReserveLamports;
+  if (sol < needed) {
+    details.lockBlocked = { solLamports: sol, needed };
+    return "insufficient_sol_for_lock";
   }
+  if (dry) {
+    would(`lock ${amount} tokens in a new lock for the founder`);
+    return undefined;
+  }
+
+  const created = await ports.lock.create(amount);
+  store.addLock({ escrow: created.lockId, sig: created.signature, amount: created.deposited.toString(), ts: ports.now() });
+  const after = await ports.chain.solBalance();
+  if (sol > after) store.addExpense(created.signature, "lock_rent", sol - after, ports.now());
+  const signature = created.signature;
 
   txs.push(signature);
   for (const slice of store.slicesByStatus("bought")) store.updateSlice(slice.id, { status: "locked", lock_sig: signature, ts: ports.now() });
-  details.locked = { amount: amount.toString(), signature };
+  details.locked = { amount: created.deposited.toString(), signature, lock: created.lockId };
   return undefined;
 }
 

@@ -35,7 +35,7 @@ const v0 = (...ixs: TransactionInstruction[]) =>
 describe("allowlist ids", () => {
   it("contains the expected programs", () => {
     expect([...ALLOWED_PROGRAMS.values()]).toEqual(
-      expect.arrayContaining(["System", "Compute Budget", "SPL Token", "Token-2022", "Associated Token Account", "Streamflow (devnet)"]),
+      expect.arrayContaining(["System", "Compute Budget", "SPL Token", "Token-2022", "Associated Token Account", "Jupiter Lock"]),
     );
   });
 
