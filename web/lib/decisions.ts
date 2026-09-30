@@ -74,7 +74,7 @@ function practiceNote(dry: DecisionRow[], mixed: boolean): string | null {
 export const STATE_GUIDE = [
   { state: "Waiting", text: "A rule isn't met yet, such as too little trading volume or too little in the wallet. Nothing is bought." },
   { state: "Skipped", text: "Every rule passed, then a final check said no, such as price impact or the UsePod second opinion." },
-  { state: "Bought", text: "The agent bought a slice and locked it in the stake contract." },
+  { state: "Bought", text: "The agent bought a slice and locked it in its own Jupiter lock for the founder." },
 ] as const;
 
 /** A run's transaction list mixes buys, locks and forwards, so name each one from the slices when we can. */
