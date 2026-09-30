@@ -4,9 +4,9 @@ import { SectionHeading } from "../sheet/SectionHeading";
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24">
+    <section id="faq" className="flex flex-col items-center text-center">
       <SectionHeading eyebrow="Frequently asked questions" title="Questions, answered" />
-      <div className="mt-14 flex max-w-[800px] flex-col gap-3">
+      <div className="mt-14 flex w-full max-w-[800px] flex-col gap-3 text-left">
         {FAQ.map((item) => (
           <details key={item.q} className="group rounded-accordion bg-band">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-[18px] text-ink [&::-webkit-details-marker]:hidden">

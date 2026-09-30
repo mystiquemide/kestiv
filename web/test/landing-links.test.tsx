@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CTA, NAV_ITEMS } from "../lib/nav";
+import { CTA, NAV_ITEMS, SECTION_PATHS } from "../lib/nav";
 import { LIVE_ROUTES } from "../lib/routes";
 import { footerSections } from "../lib/footer";
 import { WhoItsFor } from "../components/who/WhoItsFor";
@@ -8,13 +8,14 @@ import { WhoItsFor } from "../components/who/WhoItsFor";
 const INTERNAL = /^\/(?!\/)([a-z-]+)$/;
 
 describe("links to pages that don't exist", () => {
-  it("nav keeps only anchors and live routes", () => {
-    for (const i of NAV_ITEMS) expect(i.href.includes("#") || LIVE_ROUTES.includes(i.href), i.href).toBe(true);
-    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["FAQ"]);
+  it("nav has all four names with clean paths and no #", () => {
+    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Stake", "Decisions", "Run it", "FAQ"]);
+    for (const i of NAV_ITEMS) expect(i.href).not.toContain("#");
   });
 
-  it("the nav button points at the on-chain checks until /stake exists", () => {
-    expect(CTA).toEqual({ label: "Verify it yourself", href: "/#verify" });
+  it("section paths map to real ids and the nav button has no #", () => {
+    expect(SECTION_PATHS).toEqual({ "/faq": "faq", "/verify": "verify" });
+    expect(CTA).toEqual({ label: "Verify it yourself", href: "/verify" });
   });
 
   it("footer product links are left out", () => {
