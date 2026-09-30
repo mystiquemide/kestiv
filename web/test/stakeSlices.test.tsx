@@ -33,13 +33,13 @@ describe("slices model", () => {
     expect(m.rows[0]!.lockHref).toBeNull();
     const html = renderToStaticMarkup(<StakeSlices model={m} />);
     expect(html).toContain("Bought, lock pending");
-    expect(html).toContain("Not yet");
+    expect(html).toContain("Lock pending");
   });
 
-  it("says Not recorded rather than guessing tokens", () => {
+  it("says Amount not recorded rather than guessing tokens", () => {
     const m = slicesModel({ status: liveWith([slice({ tokensOut: null })]), stake: active });
     if (m.kind !== "rows") throw new Error("rows");
-    expect(m.rows[0]!.tokens).toBe("Not recorded");
+    expect(m.rows[0]!.tokens).toBe("Amount not recorded");
   });
 
   it("dry runs never count: no live slices means the empty state", () => {

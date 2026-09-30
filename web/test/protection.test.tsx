@@ -31,7 +31,7 @@ describe("gateRule", () => {
     expect(gateRule(g("liquidity_usd", 1, "available"))).toBe("A live price and pool liquidity");
     expect(gateRule(g("swaps_last_6h", 9, 5))).toBe("At least 5 trades in the last 6 hours");
     expect(gateRule(g("usepod_quote_lamports", 228, 300_000))).toBe("UsePod's check costs no more than 0.0003 SOL");
-    expect(gateRule(g("usepod_verdict", "buy", "buy"))).toBe("UsePod doesn't flag the trading as circular or concentrated");
+    expect(gateRule(g("usepod_verdict", "buy", "buy"))).toBe("UsePod's second opinion doesn't say the trades come from a few wallets trading with each other");
   });
 
   it("takes thresholds from the data, not constants", () => {
@@ -54,16 +54,16 @@ describe("buyRules", () => {
 
   it("always lists the UsePod verdict, even when the run never paid for it", () => {
     expect(dry.gates.some((x) => x.name === "usepod_verdict")).toBe(false);
-    expect(buyRules(dry.gates).at(-1)).toBe("UsePod doesn't flag the trading as circular or concentrated");
+    expect(buyRules(dry.gates).at(-1)).toBe("UsePod's second opinion doesn't say the trades come from a few wallets trading with each other");
   });
 
   it("does not list the verdict twice when the gate is present", () => {
     const rules = buyRules([...dry.gates, g("usepod_verdict", "buy", "buy")]);
-    expect(rules.filter((r) => r.startsWith("UsePod doesn't"))).toHaveLength(1);
+    expect(rules.filter((r) => r.startsWith("UsePod's second opinion"))).toHaveLength(1);
   });
 
   it("skips unknown gates", () => {
-    expect(buyRules([g("mystery", 1, 2)])).toEqual(["UsePod doesn't flag the trading as circular or concentrated"]);
+    expect(buyRules([g("mystery", 1, 2)])).toEqual(["UsePod's second opinion doesn't say the trades come from a few wallets trading with each other"]);
   });
 });
 
@@ -78,7 +78,7 @@ describe("protection model", () => {
   it("uses the devnet proof otherwise, and has no link when neither can be read", () => {
     expect(protectionModel({ status: ok(null, dry), stake: { state: "not_launched" }, proof }).cancel.lock.label).toBe("Devnet proof");
     const none = protectionModel({ status: ok(null, dry), stake: { state: "not_launched" }, proof: null });
-    expect(none.cancel.lock.error).toBe("Couldn't load the devnet proof right now.");
+    expect(none.cancel.lock.error).toBe("We couldn't load the devnet proof just now. This page checks again every minute.");
     expect(none.cancel.lock.streamflowHref).toBeNull();
   });
 
@@ -102,7 +102,7 @@ describe("protection model", () => {
 
   it("feed down: the written message and no rules", () => {
     const m = protectionModel({ status: { ok: false, error: "unreachable", fetchedAt: 1 }, stake: active, proof });
-    expect(m.checks).toMatchObject({ kind: "feed_error", message: "The agent's status feed isn't answering, so the live thresholds can't be shown right now." });
+    expect(m.checks).toMatchObject({ kind: "feed_error", message: "We can't reach the agent's reports right now, so the live thresholds can't be shown. Try again in a minute." });
     expect(JSON.stringify(m.checks)).not.toContain("rules");
   });
 

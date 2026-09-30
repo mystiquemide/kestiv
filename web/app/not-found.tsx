@@ -10,11 +10,11 @@ export default function NotFound() {
     <ErrorPage
       eyebrow="404"
       title="This step isn't on the staircase."
-      text="The page you asked for doesn't exist. It may have moved, or the link has a typo."
+      text="The page you asked for doesn't exist. The link may be old or mistyped."
       actions={
         <>
           <Link href="/stake" className="rounded-pill bg-brass px-[22px] py-[14px] text-[15px] leading-none font-medium text-ink transition-colors hover:bg-[#c8933a]">
-            See the live stake
+            See the stake
           </Link>
           <Link href="/" className="inline-flex min-h-6 items-center gap-2 text-[16px] font-medium text-ink hover:underline">
             Back to the home page

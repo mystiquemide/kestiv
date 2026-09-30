@@ -50,9 +50,9 @@ describe("stake stats", () => {
     expect(get(m, "Locked").value).toBe("145.89");
   });
 
-  it("nothing to show: says None yet, and still gives the cap", () => {
+  it("nothing to show: says nothing locked yet, and still gives the cap", () => {
     const m = stakeStats({ stake: { state: "not_launched" }, status: down, proof: null, devnetDecimals: null, now: T0 });
-    expect(get(m, "Locked").value).toBe("None yet");
+    expect(get(m, "Locked").value).toBe("Nothing locked yet");
     expect(get(m, "Next unlock").value).toBe("After the first lock");
     expect(get(m, "Cap").value).toBe("7% of supply");
   });

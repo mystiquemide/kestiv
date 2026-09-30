@@ -12,7 +12,7 @@ export interface GateView {
 }
 
 const n = (v: Gate["value"]): number | null => (typeof v === "number" ? v : v === null ? null : Number.isFinite(Number(v)) ? Number(v) : null);
-const na = "n/a";
+const na = "Unavailable";
 
 interface Spec {
   label: string;
@@ -109,7 +109,7 @@ export function gateView(g: Gate): GateView {
 
 export const KNOWN_GATES = [...Object.keys(SPECS), "swaps_last_6h"];
 
-const VERDICT_RULE = "UsePod doesn't flag the trading as circular or concentrated";
+const VERDICT_RULE = "UsePod's second opinion doesn't say the trades come from a few wallets trading with each other";
 const MARKET_RULE = "A live price and pool liquidity";
 
 /**

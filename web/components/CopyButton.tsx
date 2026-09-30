@@ -13,13 +13,16 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
   return (
     <button
       type="button"
-      aria-label={done ? "Copied" : label}
+      aria-label={label}
       onClick={() => {
         navigator.clipboard?.writeText(value).then(() => setDone(true)).catch(() => undefined);
       }}
       className="inline-flex size-8 items-center justify-center rounded-image text-helper transition-colors hover:text-ink"
     >
       {done ? <Check size={18} strokeWidth={1.75} aria-hidden="true" /> : <Copy size={18} strokeWidth={1.75} aria-hidden="true" />}
+      <span role="status" aria-live="polite" className="sr-only">
+        {done ? "Copied" : ""}
+      </span>
     </button>
   );
 }

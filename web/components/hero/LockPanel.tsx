@@ -20,7 +20,7 @@ export function LockPanel({ model, className = "" }: { model: LockPanelModel; cl
             <div className="flex min-h-11 items-center justify-between gap-4 border-b border-line">
               <span className="text-[14px] text-helper">Cancel attempt</span>
               <ExternalLink href={model.cancelAttemptHref} className="text-[16px] text-ink">
-                Failed onchain
+                Failed on chain
               </ExternalLink>
             </div>
           ) : null}

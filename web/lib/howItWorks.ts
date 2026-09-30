@@ -6,7 +6,11 @@ import type { PublicStatus } from "./schema";
 import type { AgentStatus } from "./status";
 import { timeAgo } from "./time";
 
-export const FEED_ERROR = "The agent's status feed isn't answering. The stake numbers come straight from the chain.";
+/** For pages that show only the agent's reports. */
+export const NOT_REPORTED = "The agent hasn't reported yet. Its first check appears here within a few minutes.";
+export const FEED_ERROR = "We can't reach the agent's reports right now. Try again in a minute.";
+/** For pages that also show numbers read from the chain. */
+export const FEED_ERROR_CHAIN = `${FEED_ERROR} Numbers from the chain are unaffected.`;
 
 const clusterOf = (s: PublicStatus): LinkCluster => (s.cluster === "devnet" ? "devnet" : "mainnet-beta");
 
@@ -39,7 +43,7 @@ export function feesCard(status: AgentStatus, nowSec: number): FeesCard {
   const text = any
     ? `Creator fees land in Kestiv's wallet. ${Number((any.policy.stakeShareBps / 100).toFixed(2))}% funds the stake, the rest goes straight to the founder.`
     : "Creator fees land in Kestiv's wallet. A set share funds the stake, the rest goes to the founder.";
-  if (!status.ok) return { kind: "feed_error", text, message: FEED_ERROR };
+  if (!status.ok) return { kind: "feed_error", text, message: FEED_ERROR_CHAIN };
 
   const live = status.live;
   if (!live || live.inflows.length === 0) return { kind: "empty", text, message: "No fees yet. They start with the first trade." };
@@ -74,8 +78,8 @@ export function checksCard(status: AgentStatus): ChecksCard {
   const picked = pick(status);
   const total = picked ? picked.run.gates.length : 0;
   const text = `${total > 0 ? total : WORDS[11]} checks ${tail}`;
-  if (!status.ok) return { kind: "feed_error", text, message: FEED_ERROR };
-  if (!picked) return { kind: "empty", text, message: "The agent hasn't run yet." };
+  if (!status.ok) return { kind: "feed_error", text, message: FEED_ERROR_CHAIN };
+  if (!picked) return { kind: "empty", text, message: NOT_REPORTED };
   return { kind: "run", text, dryLabel: dryLabelOf(picked.run, picked.source), gates: picked.run.gates.map(gateView) };
 }
 
@@ -99,7 +103,7 @@ export function buyCard(status: AgentStatus, decimalsFallback: number | null = n
   const text = picked
     ? `At least ${solFromLamports(picked.run.policy.minSliceLamports)} SOL, never more than ${Number((picked.run.policy.liquidityShareBps / 100).toFixed(2))}% of the pool's liquidity, routed through Jupiter.`
     : "A small slice each time, never more than a fraction of the pool's liquidity, routed through Jupiter.";
-  if (!status.ok) return { kind: "feed_error", text, message: FEED_ERROR };
+  if (!status.ok) return { kind: "feed_error", text, message: FEED_ERROR_CHAIN };
   const noQuote = "No quote yet. The agent quotes a buy once there are fees to spend.";
   if (!picked) return { kind: "no_quote", text, message: noQuote, dryLabel: null };
 
@@ -231,11 +235,11 @@ export function lockCard(
     cluster = "devnet";
     label = "Devnet proof";
   } else {
-    return { kind: "error", text: LOCK_TEXT, message: "Couldn't load the contract history right now.", label: "Devnet proof" };
+    return { kind: "error", text: LOCK_TEXT, message: "We couldn't load the contract history just now. This page checks again every minute.", label: "Devnet proof" };
   }
 
   const chart = staircase(steps, decimals);
-  if (!chart) return { kind: "error", text: LOCK_TEXT, message: "Couldn't load the contract history right now.", label: "Devnet proof" };
+  if (!chart) return { kind: "error", text: LOCK_TEXT, message: "We couldn't load the contract history just now. This page checks again every minute.", label: "Devnet proof" };
 
   return {
     kind: "chart",

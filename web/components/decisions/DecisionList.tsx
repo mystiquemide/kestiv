@@ -42,7 +42,7 @@ export function DecisionList({ rows, counts, mixed = false }: { rows: DecisionRo
                 <span className={`rounded-pill bg-white px-3 py-1 text-[12px] font-medium tracking-[0.075em] uppercase ${r.kind === "bought" ? "text-brass-ink" : r.kind === "error" ? "text-refusal" : "text-ink"}`}>{r.state}</span>
                 <span className="min-w-0 flex-1 basis-[240px] text-[16px] text-ink">
                   {r.reason}
-                  {r.dry && mixed && <span className="ml-2 text-caption text-helper">Dry run</span>}
+                  {r.dry && mixed && <span className="ml-2 text-caption text-helper">Practice run</span>}
                 </span>
                 <ChevronDown size={20} strokeWidth={1.75} className="shrink-0 text-helper transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
@@ -81,7 +81,7 @@ export function DecisionList({ rows, counts, mixed = false }: { rows: DecisionRo
                     </table>
                   </div>
                 ) : (
-                  <p className="mt-3 max-w-[560px] text-[16px] text-body">No checks ran. The run stopped before them, so nothing was bought or signed. The agent tries again on its next run. The public feed shares the state and reason, not the error text.</p>
+                  <p className="mt-3 max-w-[560px] text-[16px] text-body">No checks ran. The run stopped before them, so nothing was bought or signed. The agent tries again on its next run. The public reports share the state and reason, not the error text.</p>
                 )}
 
                 {r.usepod && (
@@ -121,7 +121,7 @@ export function DecisionList({ rows, counts, mixed = false }: { rows: DecisionRo
           </button>
         </div>
       )}
-      {visible.length === 0 && <p className="mt-8 text-[16px] text-body">No {LABEL[filter].toLowerCase()} runs yet.</p>}
+      {visible.length === 0 && <p className="mt-8 text-[16px] text-body">No runs match this filter.</p>}
     </div>
   );
 }

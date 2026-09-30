@@ -9,7 +9,7 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
     <ErrorPage
       eyebrow="Something broke"
       title="That didn't load."
-      text="It's on our side, not yours. Your stake and the chain are untouched. Try again in a moment."
+      text="It's on our side, not yours. Nothing on chain was affected. Try again in a moment."
       actions={
         <>
           <button

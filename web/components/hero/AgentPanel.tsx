@@ -22,7 +22,7 @@ export function AgentPanel({ model, className = "" }: { model: AgentPanelModel; 
     <Panel eyebrow="Latest agent run" right={<TimeAgo ts={model.ts} initial={model.initialAgo} />} className={className}>
       {model.dryLabel ? (
         <p className="mt-4 text-caption text-helper">
-          Dry run on{" "}
+          Practice run on{" "}
           <ExternalLink href={model.dryLabel.href} className="num text-ink">
             {model.dryLabel.token}
           </ExternalLink>

@@ -43,7 +43,7 @@ export function reasonText(reason: string, minSliceLamports: number): string {
     cap_headroom_below_min_slice: `Too close to the cap for a ${min} buy.`,
     price_impact_too_high: "The buy would move the price too much.",
     price_above_vwap: "The price is well above its 6 hour average.",
-    usepod_skip: "UsePod flagged the recent trading as circular or concentrated.",
+    usepod_skip: "UsePod's second opinion said recent trades look like the same few wallets trading with each other.",
     usepod_quote_too_high: "UsePod's check cost more than Kestiv will pay.",
     usepod_unavailable: "The UsePod second opinion wasn't available, so Kestiv skipped.",
     all_gates_passed: "Every check passed.",
@@ -51,14 +51,14 @@ export function reasonText(reason: string, minSliceLamports: number): string {
     all_evaluated_gates_passed: "Every check Kestiv could run passed.",
     insufficient_sol_for_contract: "Not enough SOL to open the vesting contract yet.",
     pending_confirmation: "Waiting for the last buy to confirm.",
-    lock_terms_violation: "The vesting contract's terms changed. Kestiv stopped.",
-    run_failed: "The run hit an error and stopped.",
+    lock_terms_violation: "The vesting contract's terms changed, so Kestiv stopped buying. Check the contract on Streamflow.",
+    run_failed: "The run hit an error and stopped. It tries again on its next run.",
     buy_unconfirmed: "A buy was sent but isn't confirmed yet.",
     buy_failed: "The buy didn't go through.",
     bought_lock_deferred: "Bought. The lock finishes on the next run.",
     bought_and_locked: "Bought and locked.",
   };
-  return map[reason] ?? reason.replace(/_/g, " ");
+  return map[reason] ?? `Reason: ${reason}`;
 }
 
 export const REASON_CODES = [
@@ -122,7 +122,7 @@ export function stakePanel({ stake, status, founder, cluster }: StakePanelInput)
     case "rpc_error":
       return {
         kind: "error",
-        message: "Couldn't read the chain right now. This refreshes every minute.",
+        message: "We couldn't read the chain just now. This page checks again every minute.",
         rows: recipient,
       };
     case "no_contract":
@@ -182,11 +182,11 @@ export function agentPanel(status: AgentStatus, nowSec: number): AgentPanelModel
   if (!status.ok) {
     return {
       kind: "feed_error",
-      message: "The agent's status feed isn't answering. The stake numbers come straight from the chain.",
+      message: "We can't reach the agent's reports right now. Try again in a minute. Numbers from the chain are unaffected.",
     };
   }
   const picked = agentRun(status);
-  if (!picked) return { kind: "empty", message: "The agent hasn't run yet." };
+  if (!picked) return { kind: "empty", message: "The agent hasn't reported yet. Its first check appears here within a few minutes." };
 
   const { run, source } = picked;
   const checks: CheckRow[] = [];
@@ -248,7 +248,7 @@ export function lockPanel(stake: StakeView, proof: DevnetProof | null): LockPane
   if (!proof) {
     return {
       label: "Devnet proof",
-      error: "Couldn't load the devnet proof right now.",
+      error: "We couldn't load the devnet proof just now. This page checks again every minute.",
       cells: [],
       cancelAttemptHref: null,
       streamflowHref: null,

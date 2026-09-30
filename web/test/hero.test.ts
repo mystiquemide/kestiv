@@ -100,7 +100,7 @@ describe("stake panel", () => {
 
   it("rpc_error: no numbers, founder row stays because it comes from config", () => {
     const m = stakePanel(stakeInput({ state: "rpc_error", rpcKind: "helius", error: "x" }));
-    expect(m).toMatchObject({ kind: "error", message: "Couldn't read the chain right now. This refreshes every minute." });
+    expect(m).toMatchObject({ kind: "error", message: "We couldn't read the chain just now. This page checks again every minute." });
     expect(m.rows).toHaveLength(1);
     expect(m.rows[0]?.label).toBe("Founder");
     expect(JSON.stringify(m)).not.toMatch(/\d\.\d\d%/);
@@ -144,7 +144,7 @@ describe("agent panel", () => {
     const m = agentPanel(okStatus(null, run), NOW);
     if (m.kind !== "run") throw new Error("expected run");
     expect(m.checks.map((c) => c.label)).toEqual(["Holders", "Price impact"]);
-    expect(m.checks[0]).toMatchObject({ value: "n/a", pass: false });
+    expect(m.checks[0]).toMatchObject({ value: "Unavailable", pass: false });
     expect(m).toMatchObject({ passed: 1, total: 2 });
   });
 
@@ -159,13 +159,13 @@ describe("agent panel", () => {
   });
 
   it("says the agent hasn't run when both sides are empty", () => {
-    expect(agentPanel(okStatus(null, null), NOW)).toEqual({ kind: "empty", message: "The agent hasn't run yet." });
+    expect(agentPanel(okStatus(null, null), NOW)).toEqual({ kind: "empty", message: "The agent hasn't reported yet. Its first check appears here within a few minutes." });
   });
 
   it.each(["unconfigured", "unreachable", "invalid"] as const)("maps the %s feed error to the written state", (error) => {
     expect(agentPanel({ ok: false, error, fetchedAt: 1 }, NOW)).toEqual({
       kind: "feed_error",
-      message: "The agent's status feed isn't answering. The stake numbers come straight from the chain.",
+      message: "We can't reach the agent's reports right now. Try again in a minute. Numbers from the chain are unaffected.",
     });
   });
 });
@@ -184,8 +184,8 @@ describe("reason text", () => {
     expect(reasonText("budget_below_min_slice", 100_000_000)).toBe("Not enough fees yet for a 0.1 SOL buy.");
   });
 
-  it("falls back to the code with spaces for unknown reasons", () => {
-    expect(reasonText("some_new_reason", 1)).toBe("some new reason");
+  it("falls back to the visible code for unknown reasons", () => {
+    expect(reasonText("some_new_reason", 1)).toBe("Reason: some_new_reason");
   });
 });
 
@@ -230,6 +230,6 @@ describe("lock panel", () => {
 
   it("writes an error when the devnet proof can't be read and there is no live contract", () => {
     const m = lockPanel({ state: "no_contract", ...base }, null);
-    expect(m).toMatchObject({ label: "Devnet proof", error: "Couldn't load the devnet proof right now.", cells: [], streamflowHref: null });
+    expect(m).toMatchObject({ label: "Devnet proof", error: "We couldn't load the devnet proof just now. This page checks again every minute.", cells: [], streamflowHref: null });
   });
 });

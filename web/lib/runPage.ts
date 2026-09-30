@@ -1,5 +1,5 @@
 import { solFromLamports } from "./format";
-import { FEED_ERROR } from "./howItWorks";
+import { FEED_ERROR, NOT_REPORTED } from "./howItWorks";
 import type { AgentStatus } from "./status";
 import { dateUtc } from "./format";
 
@@ -58,7 +58,7 @@ const fmt = (v: unknown): string => (v === null || v === undefined ? "n/a" : typ
 export function dryRunTranscript(status: AgentStatus): Transcript {
   if (!status.ok) return { kind: "error", message: FEED_ERROR };
   const run = status.dry ?? status.live;
-  if (!run) return { kind: "empty", message: "The agent hasn't done a dry run yet. Its first one appears here." };
+  if (!run) return { kind: "empty", message: NOT_REPORTED };
   const p = "DRY-RUN ";
   const lines = [`${p}${run.state} ${run.reason}`];
   for (const g of run.gates) {
@@ -70,7 +70,7 @@ export function dryRunTranscript(status: AgentStatus): Transcript {
   const usepod = run.runs[0]?.usepod ?? null;
   if (usepod) lines.push(`${p}usepod   outcome=${usepod.outcome}${usepod.lamports !== null ? ` quote=${usepod.lamports} lamports` : ""}`);
   const when = dateUtc(run.ts);
-  return { kind: "run", caption: `Real output from the agent's ${run.dry ? "dry run" : "run"} on ${when}. Nothing was signed.`, lines };
+  return { kind: "run", caption: `Real output from the agent's ${run.dry ? "practice run" : "run"} on ${when}. Nothing was signed.`, lines };
 }
 
 export const TERMINAL_FALLBACK = [`$ ${CLI} init`, `$ ${CLI} run-once --dry-run`, `$ ${CLI} loop`];

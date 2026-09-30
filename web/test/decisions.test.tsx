@@ -33,11 +33,11 @@ describe("decisions model", () => {
   });
 
   it("merges live and dry runs without duplicating and labels dry runs", () => {
-    const live = { ...base, dry: false, runs: [mkRun({ id: 1, dry: false, ts: 5000, state: "BOUGHT", txs: ["BUYSIG", "LOCKSIG"] })] as never };
+    const live = { ...base, dry: false, slices: [{ id: "a", status: "locked", lamportsIn: "1", tokensOut: "1", buySig: "BUYSIG", lockSig: "LOCKSIG", ts: 5000 }], runs: [mkRun({ id: 1, dry: false, ts: 5000, state: "BOUGHT", txs: ["BUYSIG", "LOCKSIG"] })] as never };
     const m = decisionsModel({ ok: true, live, dry: { ...base, runs: [mkRun({ id: 1, dry: true, ts: 4000 })] as never }, fetchedAt: 1 });
     if (m.kind !== "rows") throw new Error("rows");
     expect(m.rows.map((r) => r.key)).toEqual(["l-1", "d-1"]);
-    expect(m.rows[0]!.txs.map((t) => t.label)).toEqual(["Transaction 1", "Transaction 2"]);
+    expect(m.rows[0]!.txs.map((t) => t.label)).toEqual(["Buy transaction", "Lock transaction"]);
     expect(m.rows[0]!.txs[0]!.href).toContain("solscan.io/tx/BUYSIG");
   });
 
@@ -52,7 +52,7 @@ describe("decisions model", () => {
   it("UsePod: a dry run says quote only, a verdict shows its reason and payment link", () => {
     const quoteOnly = decisionsModel(dryOnly([mkRun({ id: 1, usepod: { outcome: "dry_run_quote_only", verdict: null, reason: null, lamports: 228, paymentSig: null, model: "m" } })]));
     if (quoteOnly.kind !== "rows") throw new Error("rows");
-    expect(quoteOnly.rows[0]!.usepod!.line).toBe("Quote only, dry run (quote 228 lamports)");
+    expect(quoteOnly.rows[0]!.usepod!.line).toBe("Quote only, practice run (quote 228 lamports)");
     const verdict = decisionsModel(dryOnly([mkRun({ id: 2, dry: false, usepod: { outcome: "paid", verdict: "skip", reason: "recent trades look circular", lamports: 300, paymentSig: "PAY", model: "m" } })]));
     if (verdict.kind !== "rows") throw new Error("rows");
     expect(verdict.rows[0]!.usepod!.line).toBe('Skip: "recent trades look circular"');

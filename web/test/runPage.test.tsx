@@ -45,7 +45,7 @@ describe("run page content", () => {
     expect(t.lines[0]).toBe(`DRY-RUN ${run.state} ${run.reason}`);
     expect(t.lines.filter((l) => l.includes(" gate ")).length).toBe(run.gates.length);
     expect(t.lines.some((l) => /gate (PASS|FAIL)  holders  value=/.test(l))).toBe(true);
-    expect(t.caption).toMatch(/^Real output from the agent's dry run on \d{1,2} [A-Z][a-z]{2} 2026\. Nothing was signed\.$/);
+    expect(t.caption).toMatch(/^Real output from the agent's practice run on \d{1,2} [A-Z][a-z]{2} 2026\. Nothing was signed\.$/);
   });
 
   it("transcript states: feed down and no run yet", () => {

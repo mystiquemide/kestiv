@@ -17,7 +17,7 @@ export function ClosingCta() {
           )}
           {stake && (
             <Link href="/stake" className="inline-flex items-center gap-2 text-[16px] font-medium text-ink hover:underline">
-              See the live stake
+              See the stake
               <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
             </Link>
           )}

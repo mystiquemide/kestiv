@@ -9,14 +9,14 @@ const AUDIENCES = [
     title: "See what the founder really holds",
     text: "Kestiv's stake is public and locked on Solana. Nothing unlocks for the first 90 days, and after that only a fixed amount each day.",
     items: ["Stake size read live from the chain", "Can't be cancelled or unlocked early", "Every buy decision is public"],
-    link: { label: "See the live stake", href: "/stake" },
+    link: { label: "See the stake", href: "/stake" },
   },
   {
     eyebrow: "For builders",
     title: "Own a real piece of what you launched",
     text: "Build a founder stake from the creator fees your token already earns. No money up front, and Kestiv never sells.",
     // The share of fees and the cap are both settable in the policy file (agent/src/policy.ts, KESTIV_POLICY_FILE).
-    items: ["Runs on your own agent wallet", "You pick the share of fees and the cap", "Skips buys when trading looks thin or circular"],
+    items: ["Runs on your own agent wallet", "You pick the share of fees and the cap", "Skips buys when trading looks thin or like the same few wallets trading with each other"],
     link: { label: "Run it on your token", href: "/run" },
   },
 ];

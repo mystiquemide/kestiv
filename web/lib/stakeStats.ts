@@ -18,7 +18,6 @@ export interface StakeStatsModel {
   cells: StatCell[];
 }
 
-const NONE = "None yet";
 
 /** Locked, vested and next unlock come from the live contract, or from the labelled devnet proof before there is one. */
 export function stakeStats(args: {
@@ -65,8 +64,8 @@ export function stakeStats(args: {
   const cells: StatCell[] =
     locked === null || vested === null
       ? [
-          { label: "Locked", value: NONE, sub: null, mono: false, tone: "default" },
-          { label: "Vested so far", value: NONE, sub: null, mono: false, tone: "default" },
+          { label: "Locked", value: "Nothing locked yet", sub: null, mono: false, tone: "default" },
+          { label: "Vested so far", value: "Nothing vested yet", sub: null, mono: false, tone: "default" },
           { label: "Next unlock", value: "After the first lock", sub: null, mono: false, tone: "default" },
         ]
       : [

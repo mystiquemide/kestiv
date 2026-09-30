@@ -67,8 +67,8 @@ export default async function DecisionsPage() {
         <NextSteps
           title="Keep going"
           steps={[
-            { label: "See the live stake", href: "/stake", text: "What the founder holds, and the lock these decisions feed." },
-            { label: "Run it on your token", href: "/run", text: "Set up your own agent in six steps, dry run first." },
+            { label: "See the stake", href: "/stake", text: "What the founder holds, and the lock these decisions feed." },
+            { label: "Run it on your token", href: "/run", text: "Set up your own agent in six steps, practice run first." },
           ]}
         />
         <PageNote repoUrl={env.repoUrl} />

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { DevnetProof, StakeView, StreamStep } from "../lib/chain";
-import { FEED_ERROR, buyCard, checksCard, feesCard, lockCard, staircase } from "../lib/howItWorks";
+import { FEED_ERROR_CHAIN, NOT_REPORTED, buyCard, checksCard, feesCard, lockCard, staircase } from "../lib/howItWorks";
 import { StatusResponseSchema, type PublicStatus } from "../lib/schema";
 import type { AgentStatus } from "../lib/status";
 
@@ -56,7 +56,7 @@ describe("fees card", () => {
     expect(feesCard(down, NOW)).toEqual({
       kind: "feed_error",
       text: "Creator fees land in Kestiv's wallet. A set share funds the stake, the rest goes to the founder.",
-      message: FEED_ERROR,
+      message: FEED_ERROR_CHAIN,
     });
   });
 });
@@ -81,9 +81,9 @@ describe("checks card", () => {
 
   it("says Eleven when there is no run, and handles empty and feed down", () => {
     const empty = checksCard(ok(null, null));
-    expect(empty).toMatchObject({ kind: "empty", message: "The agent hasn't run yet." });
+    expect(empty).toMatchObject({ kind: "empty", message: NOT_REPORTED });
     expect(empty.text.startsWith("Eleven checks before any buy")).toBe(true);
-    expect(checksCard(down)).toMatchObject({ kind: "feed_error", message: FEED_ERROR });
+    expect(checksCard(down)).toMatchObject({ kind: "feed_error", message: FEED_ERROR_CHAIN });
   });
 });
 
@@ -116,7 +116,7 @@ describe("buy card", () => {
   });
 
   it("feed down: generic text and the error", () => {
-    expect(buyCard(down)).toMatchObject({ kind: "feed_error", message: FEED_ERROR });
+    expect(buyCard(down)).toMatchObject({ kind: "feed_error", message: FEED_ERROR_CHAIN });
   });
 });
 
@@ -220,7 +220,7 @@ describe("lock card", () => {
   });
 
   it("writes an error when the devnet read or decimals fail", () => {
-    expect(lockCard({ state: "not_launched" }, null, null, 6)).toMatchObject({ kind: "error", message: "Couldn't load the contract history right now." });
+    expect(lockCard({ state: "not_launched" }, null, null, 6)).toMatchObject({ kind: "error", message: "We couldn't load the contract history just now. This page checks again every minute." });
     expect(lockCard({ state: "not_launched" }, proof(), null, null).kind).toBe("error");
     expect(lockCard({ state: "not_launched" }, proof({ steps: [] }), null, 6).kind).toBe("error");
   });

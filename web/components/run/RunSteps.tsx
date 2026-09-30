@@ -85,7 +85,7 @@ export function RunSteps({
         </Step>
 
         <Step n={5} title="Try it without spending">
-          <p>A dry run checks every gate, takes a real Jupiter quote and one free UsePod call, and prints what it would do. It signs nothing and never reads your keypair.</p>
+          <p>A dry run is a practice run that signs nothing. It checks every gate, takes a real Jupiter quote and one free UsePod call, and prints what it would do. It signs nothing and never reads your keypair.</p>
           <CodeBlock lines={[dry]} copy={dry} label="dry run command" />
           {transcript.kind === "run" ? (
             <div>
@@ -102,7 +102,7 @@ export function RunSteps({
         </Step>
 
         <Step n={6} title="Start it">
-          <p>The loop runs a check every 30 to 90 minutes. Read a dry run first and start it only when it looks right.</p>
+          <p>The loop runs a check every 30 to 90 minutes. Run a dry run first and start it only when it looks right.</p>
           <CodeBlock lines={[`${CLI} loop`]} copy={`${CLI} loop`} label="loop command" />
         </Step>
       </ol>

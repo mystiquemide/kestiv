@@ -32,7 +32,7 @@ const time = (ts: number) => {
 };
 
 const EMPTY =
-  "No slices yet. Each buy the agent makes shows up here with its buy and lock transaction. Skipped runs are on the decisions page.";
+  "No slices yet. Each buy the agent makes shows up here with its buy and lock transaction.";
 
 /**
  * One row per buy the agent made, newest first, numbered from the first. Only the live agent's slices count:
@@ -52,7 +52,7 @@ export function slicesModel(args: { status: AgentStatus; stake: StakeView }): Sl
       n: i + 1,
       date: `${dateUtc(s.ts)} ${time(s.ts)}`,
       sol: solFromLamports(Number(s.lamportsIn)),
-      tokens: s.tokensOut && decimals !== null ? tokensFull(s.tokensOut, decimals) : "Not recorded",
+      tokens: s.tokensOut && decimals !== null ? tokensFull(s.tokensOut, decimals) : "Amount not recorded",
       status: (["locked", "bought", "pending", "failed"] as const).find((x) => x === s.status) ?? "pending",
       buyHref: s.buySig ? solscanTx(s.buySig, cluster) : null,
       lockHref: s.lockSig ? solscanTx(s.lockSig, cluster) : null,

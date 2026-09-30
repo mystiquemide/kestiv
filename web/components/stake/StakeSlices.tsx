@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { ArrowUpRight, CircleAlert } from "lucide-react";
 import { STATUS_TEXT, type SliceRow, type SlicesModel } from "@/lib/stakeSlices";
 
 function Tx({ href, label }: { href: string | null; label: string }) {
-  if (!href) return <span className="text-helper">Not yet</span>;
+  if (!href) return <span className="text-helper">{label} pending</span>;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} transaction`} className="inline-flex min-h-6 items-center gap-1 font-medium text-ink hover:underline">
       {label}
@@ -26,7 +27,18 @@ export function StakeSlices({ model }: { model: SlicesModel }) {
       {model.kind !== "rows" ? (
         <div className="mt-6 flex items-start gap-3 rounded-card bg-band p-6 text-[16px] text-ink md:p-8">
           {model.kind === "error" && <CircleAlert size={24} strokeWidth={1.75} className="shrink-0 text-refusal" aria-hidden="true" />}
-          <p className="max-w-[640px] text-body">{model.message}</p>
+          <p className="max-w-[640px] text-body">
+            {model.message}
+            {model.kind === "empty" && (
+              <>
+                {" "}Skipped runs are on the{" "}
+                <Link href="/decisions" className="font-medium text-ink underline">
+                  decisions page
+                </Link>
+                .
+              </>
+            )}
+          </p>
         </div>
       ) : (
         <>

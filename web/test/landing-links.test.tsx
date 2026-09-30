@@ -16,7 +16,7 @@ describe("links to pages that don't exist", () => {
 
   it("section paths map to real ids and the nav button points at the stake page", () => {
     expect(SECTION_PATHS).toEqual({ "/faq": "faq", "/verify": "verify" });
-    expect(CTA).toEqual({ label: "See the live stake", href: "/stake" });
+    expect(CTA).toEqual({ label: "See the stake", href: "/stake" });
   });
 
   it("footer product links are left out", () => {

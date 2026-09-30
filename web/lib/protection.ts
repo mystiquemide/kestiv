@@ -50,10 +50,10 @@ export function protectionModel(args: {
       kind: "feed_error",
       heading: checksHeading,
       text: checksText,
-      message: "The agent's status feed isn't answering, so the live thresholds can't be shown right now.",
+      message: "We can't reach the agent's reports right now, so the live thresholds can't be shown. Try again in a minute.",
     };
   } else if (!run) {
-    checks = { kind: "empty", heading: checksHeading, text: checksText, message: "The agent hasn't run yet, so there are no thresholds to show." };
+    checks = { kind: "empty", heading: checksHeading, text: checksText, message: "The agent hasn't reported yet, so there are no thresholds to show." };
   } else {
     checks = { kind: "rules", heading: checksHeading, text: checksText, rules: buyRules(run.gates) };
   }

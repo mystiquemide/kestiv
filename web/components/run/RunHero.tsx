@@ -33,7 +33,7 @@ export function RunHero({ repoUrl, terminal = TERMINAL_FALLBACK }: { repoUrl: st
                   </a>
                 ) : (
                   <Link href="/stake" className="rounded-pill bg-brass px-[22px] py-[14px] text-[15px] leading-none font-medium text-ink transition-colors hover:bg-[#c8933a]">
-                    See a live stake
+                    See a working example
                   </Link>
                 )}
                 <Link href="/decisions" className="inline-flex min-h-6 items-center gap-2 text-[16px] font-medium text-ink hover:underline">

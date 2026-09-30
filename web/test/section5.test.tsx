@@ -49,7 +49,7 @@ describe("verify model", () => {
 
   it("says so when the chain read failed", () => {
     const m = verifyModel({ stake: { state: "rpc_error", rpcKind: "public", error: "x" }, status: down, proof, env, now: 1 });
-    expect(m.notice).toMatch(/Couldn't read the chain/);
+    expect(m.notice).toMatch(/couldn't read the chain/);
     expect(m.cards.find((c) => c.id === "contract")!.devnet).toBe(true);
   });
 

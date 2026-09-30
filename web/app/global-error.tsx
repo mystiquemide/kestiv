@@ -7,7 +7,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
       <body style={{ margin: 0, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F6F6F6", color: "#1F1F1F", fontFamily: "system-ui, sans-serif", textAlign: "center", padding: 24 }}>
         <div>
           <h1 style={{ fontSize: 40, fontWeight: 500, margin: 0 }}>That didn&apos;t load.</h1>
-          <p style={{ fontSize: 18, color: "#5D5D5D", margin: "16px 0 32px" }}>It&apos;s on our side. Your stake and the chain are untouched.</p>
+          <p style={{ fontSize: 18, color: "#5D5D5D", margin: "16px 0 32px" }}>It&apos;s on our side. Nothing on chain was affected.</p>
           <button type="button" onClick={() => reset()} style={{ background: "#D9A441", color: "#1F1F1F", border: 0, borderRadius: 99, padding: "14px 22px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
             Try again
           </button>

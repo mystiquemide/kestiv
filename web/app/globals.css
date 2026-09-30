@@ -200,3 +200,20 @@ html {
     transition-duration: 0.2s;
   }
 }
+
+/* Grey placeholder blocks for loading.tsx. Static when the visitor asks for less motion. */
+.skeleton {
+  background: var(--band);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes skeleton-pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  .skeleton {
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}

@@ -30,7 +30,7 @@ export default async function RunPage() {
         <NextSteps
           title="Before you run it"
           steps={[
-            { label: "See a live stake", href: "/stake", text: "Look at what the lock looks like on chain, staircase and all." },
+            { label: "See a working example", href: "/stake", text: "Look at what the lock looks like on chain, staircase and all." },
             { label: "Read the agent's decisions", href: "/decisions", text: "Every run and every check, including the ones that said no." },
           ]}
         />

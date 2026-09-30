@@ -28,12 +28,12 @@ describe("gate labels and formatting", () => {
   it("volume from swaps lower bound reads 'at least'", () => {
     expect(v(g("volume_24h_usd", 2818.69, 2000, true, "swaps_lower_bound"))[1]).toBe("at least $2,819");
     expect(v(g("volume_24h_usd", 1200, 2000, false, "swaps_24h"))[1]).toBe("$1,200");
-    expect(v(g("volume_24h_usd", null, 2000, false))[1]).toBe("n/a");
+    expect(v(g("volume_24h_usd", null, 2000, false))[1]).toBe("Unavailable");
   });
 
   it("holders, trades, buy size and price impact", () => {
     expect(v(g("holders", 12345, 25))).toEqual(["Holders", "12,345", "min 25", true]);
-    expect(v(g("holders", null, 25, false))[1]).toBe("n/a");
+    expect(v(g("holders", null, 25, false))[1]).toBe("Unavailable");
     expect(v(g("swaps_last_6h", 31, 5))).toEqual(["Trades in 6 hours", "31", "min 5", true]);
     expect(v(g("swaps_last_12h", 2, 5, false))[0]).toBe("Trades in 12 hours");
     expect(v(g("slice_lamports", 0, 50_000_000, false))).toEqual(["Buy size", "0 SOL", "min 0.05 SOL", false]);
@@ -53,7 +53,7 @@ describe("gate labels and formatting", () => {
 
   it("falls back to the name with spaces and the raw value for unknown gates", () => {
     expect(v(g("some_new_check", 42, "max 3", false))).toEqual(["some new check", "42", "max 3", false]);
-    expect(v(g("another_check", null, 1))[1]).toBe("n/a");
+    expect(v(g("another_check", null, 1))[1]).toBe("Unavailable");
   });
 
   it("covers every gate name the agent emits", () => {

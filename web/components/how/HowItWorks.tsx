@@ -26,7 +26,7 @@ function DryLabel({ label }: { label: { token: string; href: string } | null }) 
   if (!label) return null;
   return (
     <p className="mb-4 text-caption text-helper">
-      Dry run on{" "}
+      Practice run on{" "}
       <ExternalLink href={label.href} className="num text-ink">
         {label.token}
       </ExternalLink>
@@ -141,7 +141,7 @@ function LockData({ card }: { card: LockCard }) {
 export function HowItWorks({ fees, checks, buy, lock }: HowModels) {
   return (
     <section id="how-it-works">
-      <SectionHeading eyebrow="How it works" title="Four steps, all onchain" />
+      <SectionHeading eyebrow="How it works" title="Four steps, all on chain" />
       <div className="mt-14 grid gap-4 lg:grid-cols-2">
           <Card n={1} title="Fees come in" text={fees.text} wide>
             <FeesData card={fees} />

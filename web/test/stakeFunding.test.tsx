@@ -63,8 +63,8 @@ describe("agent line", () => {
   });
 
   it("says so when the feed is down or the agent never ran", () => {
-    expect(renderToStaticMarkup(<StakeAgentLine model={agentPanel(down, now)} />)).toContain("status feed isn");
-    expect(renderToStaticMarkup(<StakeAgentLine model={agentPanel({ ok: true, live: null, dry: null, fetchedAt: 1 }, now)} />)).toContain("hasn&#x27;t run yet");
+    expect(renderToStaticMarkup(<StakeAgentLine model={agentPanel(down, now)} />)).toContain("reach the agent&#x27;s reports");
+    expect(renderToStaticMarkup(<StakeAgentLine model={agentPanel({ ok: true, live: null, dry: null, fetchedAt: 1 }, now)} />)).toContain("hasn&#x27;t reported yet");
   });
 
   it("flags a stale report", () => {

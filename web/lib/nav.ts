@@ -17,7 +17,7 @@ export const SECTION_PATHS: Readonly<Record<string, string>> = { "/faq": "faq", 
 
 /** The stake page when it exists, otherwise the on-chain checks on the home page. */
 export const CTA: { label: string; href: string } = routeLive("/stake")
-  ? { label: "See the live stake", href: "/stake" }
+  ? { label: "See the stake", href: "/stake" }
   : { label: "Verify it yourself", href: "/verify" };
 
 export function isCurrent(pathname: string, href: string): boolean {

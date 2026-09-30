@@ -77,7 +77,7 @@ export function stakeHero(args: {
     case "not_launched":
       return { state: "not_launched", headline: "Not live yet", lead: "$KESTIV isn't live yet. The first lock opens after launch. The devnet proof below shows the same lock on a test token.", recipient: founder, lockLine: null, budget: null, links: walletLink };
     case "rpc_error":
-      return { state: "error", headline: "Can't read the chain", lead: "Couldn't read the chain right now. This refreshes every minute.", recipient: founder, lockLine: null, budget: null, links: walletLink };
+      return { state: "error", headline: "Chain unreachable", lead: "We couldn't read the chain just now. This page checks again every minute.", recipient: founder, lockLine: null, budget: null, links: walletLink };
     case "no_contract":
       return { state: "no_contract", headline: "0.00%", lead: "of supply. Nothing is locked yet.", recipient: founder, lockLine: null, budget: firstLockBudget(status), links: walletLink };
     case "active":

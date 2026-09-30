@@ -1,7 +1,7 @@
 import { dateTimeUtc, shortAddress } from "./format";
 import { gateView, type GateView } from "./gates";
 import { reasonText, stateLabel } from "./hero";
-import { FEED_ERROR } from "./howItWorks";
+import { FEED_ERROR, NOT_REPORTED } from "./howItWorks";
 import { solscanTx, type LinkCluster } from "./links";
 import type { PublicStatus } from "./schema";
 import type { AgentStatus } from "./status";
@@ -34,7 +34,7 @@ export type DecisionsModel =
   | { kind: "empty"; message: string }
   | { kind: "error"; message: string };
 
-export const DECISIONS_EMPTY = "No runs yet. The first check shows up here within a few minutes of the agent starting.";
+export const DECISIONS_EMPTY = NOT_REPORTED;
 
 export const kindOf = (state: string): Kind => {
   switch (state) {
@@ -56,7 +56,7 @@ function usepodView(u: PublicStatus["runs"][number]["usepod"], dry: boolean, clu
     return { verdict: u.verdict, line: `${u.verdict === "buy" ? "Buy" : "Skip"}${u.reason ? `: "${u.reason}"` : ""}`, model: u.model, paidHref };
   }
   const quote = u.lamports !== null ? ` (quote ${u.lamports} lamports)` : "";
-  return { verdict: null, line: dry ? `Quote only, dry run${quote}` : `${u.outcome.replace(/_/g, " ")}${quote}`, model: u.model, paidHref };
+  return { verdict: null, line: dry ? `Quote only, practice run${quote}` : `${u.outcome.replace(/_/g, " ")}${quote}`, model: u.model, paidHref };
 }
 
 const list = (xs: string[]) => (xs.length <= 2 ? xs.join(" and ") : `${xs[0]}, ${xs[1]} and ${xs.length - 2} more`);
@@ -66,7 +66,7 @@ function practiceNote(dry: DecisionRow[], mixed: boolean): string | null {
   if (dry.length === 0) return null;
   const tokens = list([...new Set(dry.map((r) => r.token))]);
   return mixed
-    ? `Rows marked Dry run are practice runs on ${tokens}. Nothing was signed or bought in them.`
+    ? `Rows marked Practice run are practice runs on ${tokens}. Nothing was signed or bought in them.`
     : `Every run below is a practice run on ${tokens}. Nothing was signed or bought. Runs that buy and lock appear here once the agent starts buying.`;
 }
 
@@ -76,6 +76,13 @@ export const STATE_GUIDE = [
   { state: "Skipped", text: "Every rule passed, then a final check said no, such as price impact or the UsePod second opinion." },
   { state: "Bought", text: "The agent bought a slice and locked it in the stake contract." },
 ] as const;
+
+/** A run's transaction list mixes buys, locks and forwards, so name each one from the slices when we can. */
+function txLabel(sig: string, slices: PublicStatus["slices"]): string {
+  if (slices.some((x) => x.buySig === sig)) return "Buy transaction";
+  if (slices.some((x) => x.lockSig === sig)) return "Lock transaction";
+  return "Transaction";
+}
 
 /** Every run the agent reported, newest first. Dry runs and live runs are both listed, and every dry run says so. */
 export function decisionsModel(status: AgentStatus): DecisionsModel {
@@ -100,7 +107,9 @@ export function decisionsModel(status: AgentStatus): DecisionsModel {
         token: shortAddress(r.mint, 4),
         gates: r.gates.map(gateView),
         usepod: usepodView(r.usepod, r.dry, cluster),
-        txs: r.txs.map((sig, i) => ({ label: r.txs.length > 1 ? `Transaction ${i + 1}` : "Transaction", href: solscanTx(sig, cluster) })),
+        txs: r.txs
+          .filter((sig) => sig !== r.usepod?.paymentSig)
+          .map((sig) => ({ label: txLabel(sig, s.slices), href: solscanTx(sig, cluster) })),
       });
     }
   }

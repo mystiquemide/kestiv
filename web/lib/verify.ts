@@ -74,7 +74,7 @@ export function verifyModel(args: {
 
   const notice =
     stake.state === "rpc_error"
-      ? "Couldn't read the chain right now, so the contract and lock shown are the devnet proof. This refreshes every minute."
+      ? "We couldn't read the chain just now, so the contract and lock shown are the devnet proof. This page checks again every minute."
       : !live && proof
         ? "$KESTIV has no stake contract yet. The devnet proof shows the same lock on a test token."
         : null;
