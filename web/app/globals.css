@@ -39,7 +39,7 @@
   --radius-accordion: 16px;
   --radius-image: 10px;
 
-  --shadow-float: 0 2px 100px -20px #0000001f;
+  --shadow-float: 0 2px 100px -20px #0000001f, 0 6px 60px -20px #0003;
 }
 
 html {
