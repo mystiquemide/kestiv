@@ -43,18 +43,28 @@ export async function getTokenBalance(connection: Connection, owner: PublicKey, 
   }
 }
 
+interface DasAccount {
+  owner?: string;
+  amount?: number | string;
+}
+
 interface DasResponse {
-  result?: { token_accounts?: { amount?: number | string }[] };
+  result?: { token_accounts?: DasAccount[] };
   error?: unknown;
 }
 
+/**
+ * Distinct wallet owners with a non-zero balance, via Helius DAS getTokenAccounts (paginated).
+ * Off-curve owners (PDAs: the pump.fun bonding curve, AMM pools, program vaults) are not holders.
+ * Returns null unless a Helius RPC is configured or the lookup fails.
+ */
 export async function countHolders(
   mint: PublicKey,
   rpc: { url: string; kind: RpcKind },
   fetchFn: typeof fetch = fetch,
 ): Promise<number | null> {
   if (rpc.kind !== "helius") return null;
-  let count = 0;
+  const owners = new Set<string>();
   for (let page = 1; page <= 1000; page++) {
     let json: DasResponse;
     try {
@@ -75,8 +85,17 @@ export async function countHolders(
     }
     const accounts = json.result?.token_accounts;
     if (json.error || !accounts) return null;
-    if (accounts.length === 0) return count;
-    count += accounts.filter((a) => BigInt(a.amount ?? 0) > 0n).length;
+    if (accounts.length === 0) return owners.size;
+    for (const a of accounts) {
+      if (!a.owner || BigInt(a.amount ?? 0) <= 0n) continue;
+      let onCurve = false;
+      try {
+        onCurve = PublicKey.isOnCurve(new PublicKey(a.owner).toBytes());
+      } catch {
+        continue;
+      }
+      if (onCurve) owners.add(a.owner);
+    }
   }
   return null;
 }

@@ -62,21 +62,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchChunk(connection: Connection, sigs: string[]): Promise<(ParsedTransactionWithMeta | null)[]> {
   const opts = { maxSupportedTransactionVersion: 0, commitment: "confirmed" as const };
-  try {
-    return await connection.getParsedTransactions(sigs, opts);
-  } catch {
-    let errors = 0;
-    const txs = await Promise.all(
-      sigs.map((s) =>
-        connection.getParsedTransaction(s, opts).catch(() => {
-          errors++;
-          return null;
-        }),
-      ),
-    );
-    if (errors === sigs.length) throw new Error("rpc unavailable while fetching transactions");
-    return txs;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await connection.getParsedTransactions(sigs, opts);
+    } catch {
+      await sleep(1000 * attempt);
+    }
   }
+  let errors = 0;
+  const txs: (ParsedTransactionWithMeta | null)[] = [];
+  for (const s of sigs) {
+    txs.push(
+      await connection.getParsedTransaction(s, opts).catch(() => {
+        errors++;
+        return null;
+      }),
+    );
+    await sleep(120);
+  }
+  if (errors === sigs.length) throw new Error("rpc unavailable while fetching transactions");
+  return txs;
 }
 
 export async function recentSwaps(

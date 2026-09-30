@@ -74,7 +74,7 @@ export function buildPorts(o: WiringOptions): Ports {
       mintInfo: getMint,
       holders: () => countHolders(mint, { url: chain.rpcUrl, kind: chain.rpcKind }),
       swaps: (limit) =>
-        recentSwaps(connection, mint, limit, chain.rpcKind === "public" ? { chunkSize: 10, delayMs: 1500 } : {}),
+        recentSwaps(connection, mint, limit, chain.rpcKind === "custom" ? {} : chain.rpcKind === "helius" ? { chunkSize: 10, delayMs: 600 } : { chunkSize: 10, delayMs: 1500 }),
       incoming: (until) => incomingTransfers(connection, wallet, until),
       sigStatus: (sig) => signatureState(connection, sig),
       blockHeight: () => connection.getBlockHeight("confirmed"),
