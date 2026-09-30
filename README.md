@@ -1,5 +1,7 @@
 # Kestiv
 
+[![CI](https://github.com/mystiquemide/kestiv/actions/workflows/ci.yml/badge.svg)](https://github.com/mystiquemide/kestiv/actions/workflows/ci.yml)
+
 Turn a token's creator fees into a founder stake that nobody can cancel.
 
 Live: https://kestiv.midelabs.xyz · X: [@Kestiv_xyz](https://x.com/Kestiv_xyz)
@@ -127,4 +129,4 @@ npm run kestiv -- status
 ```
 
 The website: `npm run dev -w web`.
-Design and architecture notes are in [`docs/`](docs).
+Architecture notes are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
