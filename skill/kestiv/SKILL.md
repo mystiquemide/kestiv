@@ -52,6 +52,17 @@ founder cannot cancel or redirect the stake and Kestiv's key cannot move it.
 
 There is **no sell code path**. Kestiv only buys and locks.
 
+## Setup
+
+Kestiv runs from its own repo. Clone it once and point the wrapper at it:
+
+```bash
+git clone https://github.com/mystiquemide/kestiv.git ~/kestiv
+export KESTIV_HOME=~/kestiv
+```
+
+Needs Node 22 or newer. `scripts/kestiv.sh` installs and builds the agent on first use.
+
 Helper: `scripts/kestiv.sh` wraps the CLI. Set `KESTIV_HOME` to the Kestiv repo
 checkout (`agent/dist` is built on first use).
 

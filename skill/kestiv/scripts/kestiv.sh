@@ -6,7 +6,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 home="${KESTIV_HOME:-$(cd "$here/../../.." 2>/dev/null && pwd)}"
 
 if [ ! -f "$home/agent/package.json" ]; then
-  echo "kestiv: cannot find the Kestiv repo. Set KESTIV_HOME to the checkout." >&2
+  echo "kestiv: cannot find the Kestiv repo. Clone https://github.com/mystiquemide/kestiv and set KESTIV_HOME to the checkout." >&2
   exit 2
 fi
 
