@@ -9,7 +9,7 @@
     "web"
   ],
   "scripts": {
-    "test": "npm test -w agent",
+    "test": "npm test -w agent && npm test -w web",
     "build": "npm run build -w agent && npm run build -w web",
     "lint": "npm run lint -w web",
     "kestiv": "node agent/dist/cli.js"
