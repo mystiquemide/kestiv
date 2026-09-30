@@ -159,7 +159,7 @@ async function init(): Promise<void> {
       `Fee share    ${feeShare}% to stake, ${100 - feeShare}% to founder`,
       `Cap          ${policy.capBps / 100}% of supply`,
       `Vesting      ${FOUNDER_TERMS.cliffSeconds / 86400}-day cliff, then ${FOUNDER_TERMS.vestSeconds / 86400} days linear`,
-      `Contract     cannot be cancelled, transferred or edited`,
+      `Locks        one per buy, nobody can cancel or redirect them`,
     ].join("\n"),
   );
   const rl = createInterface({ input: process.stdin, output: process.stdout });

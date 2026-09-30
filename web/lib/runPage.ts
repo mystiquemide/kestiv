@@ -42,7 +42,7 @@ export function initBlock(policy: { stakeShareBps: number; capBps: number } | nu
     `Fee share    ${share}% to stake, ${100 - share}% to founder`,
     `Cap          ${cap}% of supply`,
     `Vesting      ${CLIFF_DAYS}-day cliff, then ${VEST_DAYS} days linear`,
-    "Contract     cannot be cancelled, transferred or edited",
+    "Locks        one per buy, nobody can cancel or redirect them",
     "Type the mint's last 4 characters to confirm:",
   ];
 }
