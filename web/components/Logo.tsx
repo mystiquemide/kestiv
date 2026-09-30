@@ -54,8 +54,8 @@ export function NavLogo() {
 export function FooterLogo() {
   return (
     <div className="flex items-center gap-[10px]">
-      <Mark size={28} />
-      <span className="text-[22px] leading-none font-semibold tracking-[-0.01em] text-night-fg">Kestiv</span>
+      <Mark tile size={32} tileRadius={5} />
+      <span className="text-[22px] leading-none font-semibold tracking-[-0.01em] text-ink">Kestiv</span>
     </div>
   );
 }

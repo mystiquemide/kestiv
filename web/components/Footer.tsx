@@ -7,20 +7,20 @@ import { footerSections, photoCredits, type FooterInput } from "@/lib/footer";
 export function FooterView({ stake, env }: FooterInput) {
   const sections = footerSections({ stake, env });
   const credits = photoCredits();
-  const linkClass = "rounded-image text-[16px] text-night-fg hover:underline";
+  const linkClass = "rounded-image text-[16px] text-ink hover:underline";
 
   return (
-    <footer className="bg-night pt-24 pb-12">
+    <footer className="bg-band pt-20 pb-12 md:pt-24">
       <div className="container-k">
         <div className="flex flex-col gap-4">
           <FooterLogo />
-          <p className="text-[16px] text-night-muted">Own what you launched.</p>
+          <p className="text-[16px] text-body">Own what you launched.</p>
         </div>
 
-        <div className="mt-16 grid gap-12 md:grid-cols-3">
+        <div className="mt-16 grid gap-12 md:grid-cols-3 md:gap-8">
           {sections.map((section) => (
             <div key={section.heading}>
-              <h2 className="text-eyebrow font-medium text-night-muted">{section.heading}</h2>
+              <h2 className="text-eyebrow font-medium text-helper">{section.heading}</h2>
               <ul className="mt-4 flex flex-col gap-3">
                 {section.links.map((l) => (
                   <li key={l.href}>
@@ -40,9 +40,9 @@ export function FooterView({ stake, env }: FooterInput) {
           ))}
         </div>
 
-        <div className="mt-16 border-t border-night-line pt-8">
-          <p className="text-caption text-night-muted">Kestiv never sells. Nothing here is financial advice.</p>
-          <p className="mt-2 text-caption text-night-muted">
+        <div className="mt-16 border-t border-line pt-8">
+          <p className="text-caption text-helper">Kestiv never sells. Nothing here is financial advice.</p>
+          <p className="mt-2 text-caption text-helper">
             Photos on Unsplash by{" "}
             {credits.map((c, i) => (
               <span key={c.href}>

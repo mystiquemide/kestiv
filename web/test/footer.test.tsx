@@ -72,6 +72,14 @@ describe("footer link visibility", () => {
   });
 });
 
+describe("footer theme", () => {
+  it("is light, on the same grey as the cards, with no dark tokens", () => {
+    const html = renderToStaticMarkup(<FooterView stake={{ state: "not_launched" }} env={{ cluster: "mainnet-beta" }} />);
+    expect(html).toContain("bg-band");
+    expect(html).not.toContain("night");
+  });
+});
+
 describe("photo credits", () => {
   it("lists each photographer once with a utm-tagged profile link", () => {
     const c = photoCredits();
