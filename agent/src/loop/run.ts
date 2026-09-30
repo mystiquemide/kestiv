@@ -5,6 +5,7 @@ import { resolveVolume } from "./volume.js";
 import { computeBudget, stakeShare, type Budget } from "./budget.js";
 import { decide, type DecideInputs, type Decision } from "./decide.js";
 import type { Ports, RunResult, RunState } from "./types.js";
+import { DUST_TOKENS } from "../lock/fee.js";
 
 const MIN_INFLOW_LAMPORTS = 10_000;
 const STALE_FORWARD_SEC = 180;
@@ -48,7 +49,7 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
     // 1. lock-first
     const tokens = await ports.chain.tokenBalance();
     details.walletTokens = tokens.toString();
-    if (tokens > 0n) {
+    if (tokens > DUST_TOKENS) {
       const blocked = await lockTokens(ports, tokens, details, txs, would);
       if (blocked) return finish("WAITING", blocked);
     }
@@ -374,7 +375,7 @@ async function executeBuy(
   details.cooldownSec = cooldown;
 
   const tokens = await ports.chain.tokenBalance();
-  if (tokens > 0n) {
+  if (tokens > DUST_TOKENS) {
     const blocked = await lockTokens(ports, tokens, details, txs, () => undefined);
     if (blocked) {
       details.notes.push(`lock deferred to next run: ${blocked}`);

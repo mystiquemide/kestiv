@@ -10,6 +10,7 @@ import { recentSwaps } from "../chain/swaps.js";
 import { fetchPrice, fetchSolUsd } from "../clawpump/price.js";
 import type { DryRunConfig } from "../config.js";
 import { createFounderVesting } from "../lock/create.js";
+import { depositForBalance, streamflowTokenFeePercent } from "../lock/fee.js";
 import { readFounderVesting } from "../lock/read.js";
 import { topupFounderVesting } from "../lock/topup.js";
 import type { Policy } from "../policy.js";
@@ -88,25 +89,33 @@ export function buildPorts(o: WiringOptions): Ports {
       build: (quote) => jupiter.buildSwap(quote, wallet),
     },
     lock: {
-      create: async (amount) =>
-        createFounderVesting({
+      // `available` is every token the wallet holds. Streamflow charges its token fee on top of the deposit,
+      // so deposit only what leaves room for it, otherwise the transaction would fail for lack of tokens.
+      create: async (available) => {
+        const sender = requireKeypair(keypair);
+        const fee = await streamflowTokenFeePercent(connection, chain.cluster, sender.publicKey);
+        return createFounderVesting({
           connection,
           cluster: chain.cluster,
-          sender: requireKeypair(keypair),
+          sender,
           mint,
           tokenProgram: (await getMint()).tokenProgram,
-          amount,
+          amount: depositForBalance(available, fee),
           recipient: founder,
-        }),
-      topup: (streamId, amount) =>
-        topupFounderVesting({
+        });
+      },
+      topup: async (streamId, available) => {
+        const sender = requireKeypair(keypair);
+        const fee = await streamflowTokenFeePercent(connection, chain.cluster, sender.publicKey);
+        return topupFounderVesting({
           connection,
           cluster: chain.cluster,
-          sender: requireKeypair(keypair),
+          sender,
           streamId,
-          amount,
+          amount: depositForBalance(available, fee),
           expected: { recipient: cfg.FOUNDER_WALLET, mint: o.mint },
-        }),
+        });
+      },
       read: (streamId) => readFounderVesting(connection, chain.cluster, streamId),
       expected: { recipient: cfg.FOUNDER_WALLET, mint: o.mint, sender: cfg.KESTIV_WALLET },
     },

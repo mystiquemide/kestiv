@@ -169,7 +169,7 @@ describe("runOnce buy path", () => {
 
 describe("lock-first", () => {
   it("locks tokens already in the wallet before any buy", async () => {
-    h.state.tokens = 123n;
+    h.state.tokens = 123_000_000n;
     h.store.setConfig("contract_id", "STREAM");
     const order: string[] = [];
     const send = h.ports.send!;
@@ -188,7 +188,7 @@ describe("lock-first", () => {
   });
 
   it("waits when SOL cannot cover contract creation", async () => {
-    h.state.tokens = 10n;
+    h.state.tokens = 10_000_000n;
     h.state.sol = 100_000_000;
     const r = await runOnce(h.ports);
     expect(r).toMatchObject({ state: "WAITING", reason: "insufficient_sol_for_contract" });
@@ -196,7 +196,7 @@ describe("lock-first", () => {
   });
 
   it("refuses to top up a contract whose terms were tampered with", async () => {
-    h.state.tokens = 10n;
+    h.state.tokens = 10_000_000n;
     h.store.setConfig("contract_id", "STREAM");
     h.state.stream = vesting({}, { cancelableBySender: true });
     const r = await runOnce(h.ports);
@@ -209,7 +209,7 @@ describe("lock-first", () => {
     h.store.insertPendingSlice("old", 1, 1);
     h.store.setSliceSignature("old", "OLDSIG", 10);
     h.store.updateSlice("old", { status: "bought" });
-    h.state.tokens = 5n;
+    h.state.tokens = 5_000_000n;
     await runOnce(h.ports);
     expect(h.store.db.prepare("SELECT status, lock_sig FROM slices WHERE id='old'").get()).toEqual({ status: "locked", lock_sig: "TOPSIG" });
   });
@@ -225,11 +225,11 @@ describe("pending slice recovery", () => {
   it("confirmed -> bought, and the run continues (tokens get locked)", async () => {
     pending("SIG");
     h.state.sig.SIG = { state: "confirmed" };
-    h.state.tokens = 7n;
+    h.state.tokens = 7_000_000n;
     h.store.setConfig("contract_id", "STREAM");
     await runOnce(h.ports);
     expect(status().status).toBe("locked");
-    expect(h.calls[0]).toBe("lock.topup:STREAM:7");
+    expect(h.calls[0]).toBe("lock.topup:STREAM:7000000");
   });
 
   it("failed -> failed with reason", async () => {
@@ -426,3 +426,12 @@ describe("dry run", () => {
   });
 });
 
+
+describe("dust", () => {
+  it("does not try to lock a handful of leftover raw units", async () => {
+    const h = harness();
+    h.state.tokens = 5_000n;
+    await runOnce(h.ports);
+    expect(h.calls.filter((c) => c.startsWith("lock."))).toEqual([]);
+  });
+});
