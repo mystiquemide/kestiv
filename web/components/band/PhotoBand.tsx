@@ -15,6 +15,7 @@ export function PhotoBand() {
         sizes="(min-width: 1224px) 1176px, 100vw"
         className="absolute inset-0 -z-10 h-full w-full object-cover"
       />
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/30" />
       <div className="p-8 md:p-16">
         <h2 id="photo-band-title" className="max-w-[560px] text-h2 text-white">
           Every buy adds a step. No step can be taken away.

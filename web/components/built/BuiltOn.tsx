@@ -25,7 +25,7 @@ export function BuiltOn() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${l.name} website`}
-                className="flex items-center gap-2 transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                className="flex min-h-6 items-center gap-2 transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
               >
                 <Mark logo={l} />
                 {l.label ? <span className="text-[20px] leading-none font-medium text-ink">{l.label}</span> : null}

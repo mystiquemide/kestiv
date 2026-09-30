@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { AgentPanelModel, LockPanelModel, StakePanelModel } from "@/lib/hero";
+import { routeLive } from "@/lib/routes";
 import { CtaPill } from "../CtaPill";
 import { AgentPanel } from "./AgentPanel";
 import { Facts } from "./Facts";
@@ -24,10 +25,12 @@ export function HeroBand({ stake, agent, lock }: HeroModels) {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6">
             <CtaPill className="inline-flex" />
-            <Link href="/run" className="inline-flex items-center gap-2 rounded-image text-[16px] font-medium text-ink hover:underline">
-              Run it on your token
-              <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
-            </Link>
+            {routeLive("/run") && (
+              <Link href="/run" className="inline-flex items-center gap-2 rounded-image text-[16px] font-medium text-ink hover:underline">
+                Run it on your token
+                <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
+              </Link>
+            )}
           </div>
         </div>
 

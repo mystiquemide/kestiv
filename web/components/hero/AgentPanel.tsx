@@ -1,3 +1,4 @@
+import { routeLive } from "@/lib/routes";
 import Link from "next/link";
 import { Check, CircleAlert, Clock, X } from "lucide-react";
 import type { AgentPanelModel } from "@/lib/hero";
@@ -60,9 +61,11 @@ export function AgentPanel({ model, className = "" }: { model: AgentPanelModel; 
         <p className="text-helper">
           {model.passed} of {model.total} checks passed
         </p>
-        <Link href="/decisions" className="text-ink underline-offset-2 hover:underline">
-          See all checks
-        </Link>
+        {routeLive("/decisions") && (
+          <Link href="/decisions" className="text-ink underline-offset-2 hover:underline">
+            See all checks
+          </Link>
+        )}
       </div>
 
       {model.stale ? (

@@ -16,10 +16,17 @@ const geistMono = Geist_Mono({
 
 export const revalidate = 60;
 
+const SITE = "https://kestiv.midelabs.xyz";
+const DESCRIPTION =
+  "Kestiv turns a token's creator fees into a founder stake, and locks every token it buys where nobody can cancel it.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
+  alternates: { canonical: "/" },
+  openGraph: { type: "website", siteName: "Kestiv", title: "Kestiv · Own what you launched", description: DESCRIPTION, url: SITE },
+  twitter: { card: "summary", title: "Kestiv · Own what you launched", description: DESCRIPTION, creator: "@Kestiv_xyz" },
   title: { default: "Kestiv · Own what you launched", template: "%s · Kestiv" },
-  description:
-    "Kestiv turns a token's creator fees into a founder stake, and locks every token it buys where nobody can cancel it.",
+  description: DESCRIPTION,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

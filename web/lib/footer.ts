@@ -1,3 +1,4 @@
+import { routeLive } from "./routes";
 import { X_URL, pumpFunCoin, solscanAccount, streamflowUrl, type LinkCluster } from "./links";
 
 export interface FooterLinkSpec {
@@ -32,16 +33,14 @@ export function footerSections({ stake, env }: FooterInput): FooterSection[] {
   const follow: FooterLinkSpec[] = [{ label: "X @Kestiv_xyz", href: X_URL, external: true, icon: "x" }];
   if (env.repoUrl) follow.push({ label: "GitHub", href: env.repoUrl, external: true, icon: "github" });
 
-  const sections: FooterSection[] = [
-    {
-      heading: "Product",
-      links: [
-        { label: "Stake", href: "/stake", external: false },
-        { label: "Decisions", href: "/decisions", external: false },
-        { label: "Run it", href: "/run", external: false },
-      ],
-    },
-  ];
+  const product: FooterLinkSpec[] = [
+    { label: "Stake", href: "/stake", external: false },
+    { label: "Decisions", href: "/decisions", external: false },
+    { label: "Run it", href: "/run", external: false },
+  ].filter((l) => routeLive(l.href));
+
+  const sections: FooterSection[] = [];
+  if (product.length > 0) sections.push({ heading: "Product", links: product });
   if (proof.length > 0) sections.push({ heading: "Proof", links: proof });
   sections.push({ heading: "Follow", links: follow });
   return sections;

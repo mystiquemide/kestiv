@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
+import { routeLive } from "@/lib/routes";
 import { SectionHeading } from "../sheet/SectionHeading";
 
 const AUDIENCES = [
@@ -38,10 +39,12 @@ export function WhoItsFor() {
                 </li>
               ))}
             </ul>
-            <Link href={a.link.href} className="mt-auto inline-flex items-center gap-2 pt-10 text-[16px] font-medium text-ink hover:underline">
-              {a.link.label}
-              <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
-            </Link>
+            {routeLive(a.link.href) && (
+              <Link href={a.link.href} className="mt-auto inline-flex items-center gap-2 pt-10 text-[16px] font-medium text-ink hover:underline">
+                {a.link.label}
+                <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
+              </Link>
+            )}
           </article>
         ))}
       </div>

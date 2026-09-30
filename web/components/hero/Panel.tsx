@@ -28,7 +28,7 @@ const TONE = { default: "text-ink", brass: "text-brass-ink", refusal: "text-refu
 
 export function ExternalLink({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 hover:underline ${className}`}>
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`inline-flex min-h-6 items-center gap-1 hover:underline ${className}`}>
       {children}
       <ArrowUpRight size={14} strokeWidth={1.75} aria-hidden="true" />
     </a>
