@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { WhiteSheet } from "@/components/sheet/WhiteSheet";
 import { StakeHero } from "@/components/stake/StakeHero";
-import { getDevnetProof, getStakeView, type DevnetProof } from "@/lib/chain";
+import { StakeLock } from "@/components/stake/StakeLock";
+import { getDevnetProof, getMintSupply, getStakeView, type DevnetProof } from "@/lib/chain";
 import { serverEnv } from "@/lib/env";
 import { stakeHero } from "@/lib/stakePage";
+import { stakeChartCard } from "@/lib/stakeChart";
 import { getAgentStatus } from "@/lib/status";
+import { nowSec } from "@/lib/time";
 
 export const metadata: Metadata = {
   title: "Founder stake",
@@ -19,9 +23,15 @@ export default async function StakePage() {
     getDevnetProof().catch((): DevnetProof | null => null),
   ]);
 
+  const devnetDecimals = proof ? await getMintSupply(proof.stream.mint, "devnet").then((m) => m.decimals).catch(() => null) : null;
+  const card = stakeChartCard({ stake, proof, devnetDecimals, now: nowSec() });
+
   return (
     <main>
       <StakeHero model={stakeHero({ stake, status, proof, env: { cluster: env.cluster, wallet: env.wallet, founder: env.founder } })} />
+      <WhiteSheet>
+        <StakeLock card={card} />
+      </WhiteSheet>
     </main>
   );
 }
