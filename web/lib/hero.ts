@@ -57,6 +57,7 @@ export function reasonText(reason: string, minSliceLamports: number): string {
     buy_failed: "The buy didn't go through.",
     bought_lock_deferred: "Bought. The lock finishes on the next run.",
     bought_and_locked: "Bought and locked.",
+    manual_first_lock: "The founder bought and locked the first stake by hand, outside the agent's checks.",
   };
   return map[reason] ?? `Reason: ${reason}`;
 }
@@ -67,6 +68,7 @@ export const REASON_CODES = [
   "cap_headroom_below_min_slice", "price_impact_too_high", "price_above_vwap", "usepod_skip", "usepod_quote_too_high",
   "usepod_unavailable", "all_gates_passed", "gates_passed_so_far", "all_evaluated_gates_passed", "insufficient_sol_for_lock",
   "pending_confirmation", "lock_terms_violation", "run_failed", "buy_unconfirmed", "buy_failed", "bought_lock_deferred", "bought_and_locked",
+  "manual_first_lock",
 ] as const;
 
 export function stateLabel(state: string): string {

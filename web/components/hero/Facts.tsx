@@ -1,7 +1,7 @@
 import { Coins, LockKeyhole, ShieldCheck } from "lucide-react";
 
 const FACTS = [
-  { Icon: Coins, title: "Paid by fees", text: "The stake is bought with the token's creator fees, not the founder's money." },
+  { Icon: Coins, title: "Paid by fees", text: "Creator fees fund the stake. Only the very first lock was seeded by the founder." },
   { Icon: LockKeyhole, title: "Locked, then daily", text: "Nothing unlocks for 90 days. Then a little unlocks every day." },
   { Icon: ShieldCheck, title: "Nobody can cancel it", text: "Not the founder, not Kestiv. Each lock is created with cancel set to nobody." },
 ];

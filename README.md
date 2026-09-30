@@ -15,7 +15,7 @@ ClawPump looked at 7,215 of its own launches. The median founder ended up with 0
 I launch tokens too, and I have the same problem. Creator fees trickle in and get spent. Buying a stake by hand invites front-running, and any dev buy looks like a rug until it is locked.
 
 Kestiv is the fix I wanted: an agent that spends part of the fees buying the founder's own token and locks every token it buys in its own Jupiter lock, on chain, where anyone can check it.
-There is no mainnet receipt yet because $KESTIV has not launched. What exists today is two devnet locks, the agent's practice runs, and the site reading all of it live. Links are below.
+$KESTIV is live on mainnet with one real lock so far, made by hand as the first stake (see Real usage). The cancel proof is on devnet, plus the agent's practice runs. The site reads all of it live. Links are below.
 
 ## What it is
 
@@ -41,7 +41,7 @@ I did not build a launchpad, a staking dashboard, or a lockup you have to trust.
 
 | What the judges look at | Where Kestiv stands |
 |---|---|
-| Onchain volume | Every slice is a real Jupiter swap of the token, signed by the agent. None yet: the token launches on 1 Oct |
+| Onchain volume | Every slice is a real Jupiter swap of the token, signed by the agent. One so far: the first mainnet stake, bought by hand with the agent's own code |
 | Builders onboarded | Any ClawPump builder can run it on their own token. There is a [six-step guide](https://kestiv.midelabs.xyz/run) and a Hermes skill in [`skill/kestiv`](skill/kestiv/SKILL.md). The pull request to Clawpump/agents-skills is [open](https://github.com/Clawpump/agents-skills/pull/16) |
 | Attention | Every decision, skip and lock is public on the [decisions page](https://kestiv.midelabs.xyz/decisions) and on X |
 | Deploy early | Site, agent and devnet proof are live since 30 Sep 2026 |
@@ -87,11 +87,14 @@ I did not build a launchpad, a staking dashboard, or a lockup you have to trust.
 | Lock program | [`LocpQg...qjn`](https://solscan.io/account/LocpQgucEQHbqNABEYvBvwoxCPsSbG91A1QaQhQQqjn) |
 | Kestiv wallet | [`HXqExL...Kzs4`](https://solscan.io/account/HXqExLdZuPYAqaP6vS87yr6ZEm6Q1KtudFx1nzYwKzs4) |
 | Founder wallet | [`DC1B96...JryB`](https://solscan.io/account/DC1B96Rw9yftgZN7HYktA47nneFSDbu5mpedkYPxJryB) |
-| $KESTIV mint | Pending launch |
+| $KESTIV mint | [`2ZwFnA...koW`](https://solscan.io/token/2ZwFnAffH39kkfxNm8pWvzmnDr4A6AdTtNCt8qYr4koW) |
+| Mainnet lock | [`6mtUJM...4Ggs`](https://lock.jup.ag/escrow/6mtUJMJpc58RHErSZYWUyoZZrbZ5xFXPPEydX3eX4Ggs) |
+| Mainnet buy tx | [`23y4jd...E6N`](https://solscan.io/tx/23y4jdQXiYcocvPzmJEUSWFtokrPp8cxwrs34PssAT5NMMerEAypjVypUrY7DysR4rtUWLJxAdjopUBpZTb38E6N) |
+| Mainnet lock tx | [`kM8JGA...Kor`](https://solscan.io/tx/kM8JGAPh4j1FNR6nGXpSrqh1xCryWt5GYZ9EBYhp6JgBdYCywFVnbDNBE4g3eutpBJy9TTFFSedbxHAFMT3HKor) |
 
 ## Real usage
 
-None on mainnet yet. The agent has run practice runs against a live pump.fun token, and each one is on the [decisions page](https://kestiv.midelabs.xyz/decisions). No tokens have been bought or locked for $KESTIV.
+One mainnet stake. On 30 Sep 2026 I started a buy by hand with the agent's own buy and lock code: 0.05 SOL bought 1,763,352 $KESTIV, which went into one Jupiter lock for the founder (cancel and change-recipient set to nobody, 90-day cliff, then daily for a year). It was seeded by me, not by creator fees, and it skipped the agent's checks, because $KESTIV does not pass them yet. Every later buy has to. The agent's practice runs against the live token are on the [decisions page](https://kestiv.midelabs.xyz/decisions).
 
 ## How this differs
 
@@ -115,7 +118,7 @@ None on mainnet yet. The agent has run practice runs against a live pump.fun tok
 
 ## What's real
 
-Real: the devnet locks and their transactions, the chain reads, the agent's checks, the practice runs against a live token, the site, and the tests. Pending: the mainnet token, live buys and locks, paid UsePod verdicts, and the agents-skills pull request being merged. There are no mocked numbers on the site.
+Real: the mainnet lock and its transactions, the devnet locks and cancel proof, the chain reads, the agent's checks, the practice runs against a live token, the site, and the tests. Pending: fee-funded buys and locks by the running agent, paid UsePod verdicts, and the agents-skills pull request being merged. There are no mocked numbers on the site.
 
 Tests: 178 in `agent/`, 242 in `web/`. Run `npm test` from the root.
 

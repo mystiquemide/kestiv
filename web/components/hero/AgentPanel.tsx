@@ -58,9 +58,7 @@ export function AgentPanel({ model, className = "" }: { model: AgentPanelModel; 
       </ul>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-caption">
-        <p className="text-helper">
-          {model.passed} of {model.total} checks passed
-        </p>
+        <p className="text-helper">{model.total === 0 ? "Checks didn't run for this lock" : `${model.passed} of ${model.total} checks passed`}</p>
         {routeLive("/decisions") && (
           <Link href="/decisions" className="inline-flex min-h-6 items-center text-ink underline-offset-2 hover:underline">
             See all checks

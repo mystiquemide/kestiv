@@ -81,7 +81,11 @@ export function DecisionList({ rows, counts, mixed = false }: { rows: DecisionRo
                     </table>
                   </div>
                 ) : (
+                  r.reason === "manual_first_lock" ? (
+                  <p className="mt-3 max-w-[560px] text-[16px] text-body">The founder started this buy and lock by hand, so the agent&apos;s checks did not run. It used the agent&apos;s own buy and lock code. Later buys go through the checks.</p>
+                ) : (
                   <p className="mt-3 max-w-[560px] text-[16px] text-body">No checks ran. The run stopped before them, so nothing was bought or signed. The agent tries again on its next run. The public reports share the state and reason, not the error text.</p>
+                )
                 )}
 
                 {r.usepod && (
