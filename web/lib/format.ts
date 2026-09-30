@@ -53,3 +53,9 @@ export function formatUsdSmall(n: number): string {
   const digits = Math.min(12, Math.ceil(-Math.log10(n)) + 2);
   return `$${n.toFixed(digits)}`;
 }
+
+/** "30 Sep 2026 13:11 UTC" */
+export function dateTimeUtc(tsSec: number): string {
+  const d = new Date(tsSec * 1000);
+  return `${dateUtc(tsSec)} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+}

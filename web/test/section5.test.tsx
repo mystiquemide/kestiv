@@ -82,11 +82,10 @@ describe("faq", () => {
   });
 });
 
-describe("buttons to pages that don't exist", () => {
-  it("render only when their route is live", () => {
-    expect(routeLive("/decisions")).toBe(false);
-    for (const r of ["/stake", "/run"]) expect(routeLive(r), r).toBe(true);
-    expect(renderToStaticMarkup(<PhotoBand />)).not.toContain("/decisions");
+describe("buttons to pages", () => {
+  it("every page a section 5 button points at is live, so the buttons render", () => {
+    for (const r of ["/decisions", "/run", "/stake"]) expect(routeLive(r), r).toBe(true);
+    expect(renderToStaticMarkup(<PhotoBand />)).toContain('href="/decisions"');
     const cta = renderToStaticMarkup(<ClosingCta />);
     expect(cta).toContain("Start owning what you launched.");
     expect(cta).toContain('href="/run"');
@@ -96,6 +95,6 @@ describe("buttons to pages that don't exist", () => {
   it("photo band has its headline and no em dash", () => {
     const html = renderToStaticMarkup(<PhotoBand />);
     expect(html).toContain("Every buy adds a step. No step can be taken away.");
-    expect(html).not.toContain("—");
+    expect(html).not.toContain("\u2014");
   });
 });

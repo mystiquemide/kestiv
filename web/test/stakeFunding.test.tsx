@@ -57,9 +57,9 @@ describe("agent line", () => {
     expect(html).not.toContain("—");
   });
 
-  it("links to decisions only when that page exists", () => {
+  it("links to decisions because that page exists", () => {
     const html = renderToStaticMarkup(<StakeAgentLine model={agentPanel({ ok: true, live: null, dry: run, fetchedAt: 1 }, now)} />);
-    expect(html).not.toContain("/decisions");
+    expect(html).toContain('href="/decisions"');
   });
 
   it("says so when the feed is down or the agent never ran", () => {
