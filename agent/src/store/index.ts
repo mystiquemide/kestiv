@@ -28,6 +28,8 @@ export interface SliceRow {
   reason: string | null;
   created_ts: number | null;
   last_valid_height: number | null;
+  bought_ts: number | null;
+  locked_ts: number | null;
 }
 
 export interface InflowRow {
@@ -155,12 +157,48 @@ export class Store {
     this.db.prepare("UPDATE slices SET buy_sig = ?, last_valid_height = ? WHERE id = ?").run(buySig, lastValidHeight, id);
   }
 
-  updateSlice(id: string, patch: { status: SliceStatus; reason?: string | null; tokens_out?: string | null; lock_sig?: string | null }): void {
+  updateSlice(
+    id: string,
+    patch: { status: SliceStatus; reason?: string | null; tokens_out?: string | null; lock_sig?: string | null; ts?: number },
+  ): void {
     this.db
       .prepare(
-        "UPDATE slices SET status = ?, reason = COALESCE(?, reason), tokens_out = COALESCE(?, tokens_out), lock_sig = COALESCE(?, lock_sig) WHERE id = ?",
+        "UPDATE slices SET status = ?, reason = COALESCE(?, reason), tokens_out = COALESCE(?, tokens_out), lock_sig = COALESCE(?, lock_sig)," +
+          " bought_ts = CASE WHEN ? = 'bought' THEN COALESCE(?, bought_ts) ELSE bought_ts END," +
+          " locked_ts = CASE WHEN ? = 'locked' THEN COALESCE(?, locked_ts) ELSE locked_ts END WHERE id = ?",
       )
-      .run(patch.status, patch.reason ?? null, patch.tokens_out ?? null, patch.lock_sig ?? null, id);
+      .run(patch.status, patch.reason ?? null, patch.tokens_out ?? null, patch.lock_sig ?? null, patch.status, patch.ts ?? null, patch.status, patch.ts ?? null, id);
+  }
+
+  allSlices(): SliceRow[] {
+    return this.db.prepare("SELECT * FROM slices ORDER BY created_ts DESC, rowid DESC").all() as SliceRow[];
+  }
+
+  recentInflows(limit: number): InflowRow[] {
+    return this.db
+      .prepare("SELECT sig, lamports, source, ts, sender FROM inflows ORDER BY ts DESC, rowid DESC LIMIT ?")
+      .all(limit) as InflowRow[];
+  }
+
+  inflowTotals(): { fee: number; seed: number } {
+    const rows = this.db.prepare("SELECT source, COALESCE(SUM(lamports),0) AS n FROM inflows GROUP BY source").all() as {
+      source: "fee" | "seed";
+      n: number;
+    }[];
+    const out = { fee: 0, seed: 0 };
+    for (const r of rows) out[r.source] = r.n;
+    return out;
+  }
+
+  forwardedTotal(): number {
+    const row = this.db.prepare("SELECT COALESCE(SUM(lamports),0) AS n FROM forwards").get() as { n: number };
+    return row.n;
+  }
+
+  recentRuns(limit: number): RunRow[] {
+    return this.db
+      .prepare("SELECT id, state, reason, ts, details, txs FROM runs ORDER BY id DESC LIMIT ?")
+      .all(limit) as RunRow[];
   }
 
   slicesByStatus(status: SliceStatus): SliceRow[] {

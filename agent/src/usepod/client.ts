@@ -45,6 +45,7 @@ export interface UsepodResult {
   paymentSignature?: string;
   headers?: Record<string, string>;
   error?: string;
+  model?: string;
 }
 
 export function parseQuoteHeader(b64: string): SolQuote {
@@ -86,6 +87,10 @@ export interface UsepodOptions {
 }
 
 export async function usepodVerdict(o: UsepodOptions): Promise<UsepodResult> {
+  return { ...(await runUsepod(o)), model: o.model };
+}
+
+async function runUsepod(o: UsepodOptions): Promise<UsepodResult> {
   const f = o.fetchFn ?? fetch;
   const url = o.url ?? USEPOD_URL;
   const body = JSON.stringify({ model: o.model, max_tokens: 120, temperature: 0, messages: o.messages });

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { Command } from "commander";
@@ -21,6 +21,8 @@ import { runOnce } from "./loop/run.js";
 import type { RunResult } from "./loop/types.js";
 import { buildPorts } from "./loop/wiring.js";
 import { checkCap, loadPolicy } from "./policy.js";
+import { buildPublicStatus, setNextRunAt, statusPaths, writePublicStatus } from "./status/public.js";
+import { createStatusServer } from "./status/server.js";
 import { Store, WriteOnceError, resolveDbPath } from "./store/index.js";
 
 const SLICE_STATUSES = ["pending", "bought", "locked", "failed"] as const;
@@ -105,30 +107,31 @@ function runtime(opts: { dry: boolean; mint?: string }) {
   return { cfg, policy, store, mint: cfg.KESTIV_MINT };
 }
 
-function writeStatus(cfg: DryRunConfig, r: RunResult, mint: string): void {
-  const base = cfg.KESTIV_STATUS_PATH ?? "./data/status.json";
-  const path = r.dry ? base.replace(/\.json$/, "") + ".dry.json" : base;
+function writeStatus(rt: ReturnType<typeof runtime>, r: RunResult): string {
+  const paths = statusPaths(rt.cfg.KESTIV_STATUS_PATH);
+  const path = r.dry ? paths.dry : paths.live;
   mkdirSync(dirname(path), { recursive: true });
-  const d = r.details as { gates?: unknown; stake?: unknown };
-  writeFileSync(
-    path,
-    JSON.stringify(
-      { state: r.state, reason: r.reason, ts: r.ts, dry: r.dry, mint, txs: r.txs, gates: d.gates ?? [], stake: d.stake, budget: r.budget, cluster: cfg.SOLANA_CLUSTER },
-      null,
-      2,
-    ),
-  );
+  const status = buildPublicStatus({
+    store: rt.store,
+    result: r,
+    cfg: rt.cfg,
+    policy: rt.policy,
+    mint: rt.mint,
+    nowSec: r.ts,
+  });
+  writePublicStatus(path, status);
+  return path;
 }
 
-async function runCommand(opts: { dryRun?: boolean; mint?: string }): Promise<RunResult> {
+async function runCommand(opts: { dryRun?: boolean; mint?: string }): Promise<{ result: RunResult; statusPath: string }> {
   const dry = Boolean(opts.dryRun);
   const rt = runtime({ dry, mint: opts.mint });
   try {
     const ports = buildPorts({ cfg: rt.cfg, policy: rt.policy, store: rt.store, dry, mint: rt.mint });
     const result = await runOnce(ports);
-    writeStatus(rt.cfg, result, rt.mint);
+    const statusPath = writeStatus(rt, result);
     console.log(formatRun(result));
-    return result;
+    return { result, statusPath };
   } finally {
     rt.store.close();
   }
@@ -187,12 +190,14 @@ async function loop(opts: { dryRun?: boolean }): Promise<void> {
   process.on("SIGINT", () => (stop = true));
   process.on("SIGTERM", () => (stop = true));
   while (!stop) {
+    let statusPath: string | undefined;
     try {
-      await runCommand({ dryRun: dry });
+      statusPath = (await runCommand({ dryRun: dry })).statusPath;
     } catch (e) {
       console.error(`run failed: ${e instanceof Error ? e.message.replace(/api-key=[^&\s]+/gi, "api-key=<redacted>") : "error"}`);
     }
     const sleepSec = policy.cooldownMinSec + Math.floor(Math.random() * (policy.cooldownMaxSec - policy.cooldownMinSec));
+    if (statusPath) setNextRunAt(statusPath, Math.floor(Date.now() / 1000) + sleepSec);
     console.log(`${dry ? "DRY-RUN " : ""}next run in ${Math.round(sleepSec / 60)} min`);
     for (let i = 0; i < sleepSec && !stop; i++) await new Promise((r) => setTimeout(r, 1000));
   }
@@ -213,8 +218,17 @@ function addFeeSource(pubkey: string): void {
   }
 }
 
+function serveStatus(): void {
+  const env = readEnv();
+  const port = Number(env.STATUS_PORT ?? 8787);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) fail("STATUS_PORT is invalid");
+  const server = createStatusServer(statusPaths(env.KESTIV_STATUS_PATH));
+  server.listen(port, "127.0.0.1", () => console.log(`serving /status and /health on 127.0.0.1:${port}`));
+}
+
 const program = new Command().name("kestiv").description("Turns creator fees into a locked founder stake.");
 program.command("status").description("Show configuration presence and local state").action(status);
+program.command("serve-status").description("Serve the public status files over read-only HTTP on 127.0.0.1").action(serveStatus);
 program.command("init").description("Review and lock in mint, founder and vesting terms").action(init);
 program
   .command("run-once")

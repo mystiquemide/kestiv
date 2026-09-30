@@ -31,7 +31,7 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
   const { store, policy, dry } = ports;
   const startedAt = ports.now();
   const txs: string[] = [];
-  const details: Details = { dry, mint: ports.mint, actions: [], notes: [] };
+  const details: Details = { dry, mint: ports.mint, gates: [], actions: [], notes: [] };
   let budget: Budget | undefined;
 
   const finish = (state: RunState, reason: string): RunResult => {
@@ -178,6 +178,7 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
       paymentSignature: veto.paymentSignature,
       headers: veto.headers,
       error: veto.error,
+      model: veto.model,
     };
     if (veto.paymentSignature) txs.push(veto.paymentSignature);
     decision = decide(inputs, policy);
@@ -221,7 +222,7 @@ async function recoverPending(ports: Ports, details: Details): Promise<string[]>
     }
     const st = await ports.chain.sigStatus(slice.buy_sig);
     if (st.state === "confirmed") {
-      if (!dry) store.updateSlice(slice.id, { status: "bought" });
+      if (!dry) store.updateSlice(slice.id, { status: "bought", ts: ports.now() });
       details.notes.push(`slice ${slice.id} confirmed: ${dry ? "would mark" : "marked"} bought`);
     } else if (st.state === "failed") {
       if (!dry) store.updateSlice(slice.id, { status: "failed", reason: `tx_failed: ${st.err ?? "unknown"}` });
@@ -278,7 +279,7 @@ async function lockTokens(
   }
 
   txs.push(signature);
-  for (const slice of store.slicesByStatus("bought")) store.updateSlice(slice.id, { status: "locked", lock_sig: signature });
+  for (const slice of store.slicesByStatus("bought")) store.updateSlice(slice.id, { status: "locked", lock_sig: signature, ts: ports.now() });
   details.locked = { amount: amount.toString(), signature };
   return undefined;
 }
@@ -366,7 +367,7 @@ async function executeBuy(
   }
 
   txs.push(signature);
-  store.updateSlice(id, { status: "bought", tokens_out: quote.outAmount.toString() });
+  store.updateSlice(id, { status: "bought", tokens_out: quote.outAmount.toString(), ts: ports.now() });
   const cooldown = policy.cooldownMinSec + Math.floor(ports.random() * (policy.cooldownMaxSec - policy.cooldownMinSec));
   store.setConfig("cooldown_until", String(startedAt + cooldown));
   details.cooldownSec = cooldown;

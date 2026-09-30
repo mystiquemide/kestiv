@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS slices (
   lock_sig TEXT,
   reason TEXT,
   created_ts INTEGER,
-  last_valid_height INTEGER
+  last_valid_height INTEGER,
+  bought_ts INTEGER,
+  locked_ts INTEGER
 );
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY,
@@ -46,6 +48,8 @@ CREATE TABLE IF NOT EXISTS expenses (
 export const ADDED_COLUMNS: readonly { table: string; column: string; type: string }[] = [
   { table: "inflows", column: "sender", type: "TEXT" },
   { table: "slices", column: "last_valid_height", type: "INTEGER" },
+  { table: "slices", column: "bought_ts", type: "INTEGER" },
+  { table: "slices", column: "locked_ts", type: "INTEGER" },
   { table: "runs", column: "details", type: "TEXT" },
   { table: "runs", column: "txs", type: "TEXT" },
 ];
