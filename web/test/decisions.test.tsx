@@ -78,7 +78,6 @@ describe("decision list markup", () => {
     expect(html.match(/<details/g)).toHaveLength(2);
     expect(html).not.toContain("<details open");
     expect(html).toContain('scope="col"');
-    expect(html).toContain("Dry run, nothing signed");
   });
 
   it("no em dash, safe external links", () => {

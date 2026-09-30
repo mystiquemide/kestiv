@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { WhiteSheet } from "@/components/sheet/WhiteSheet";
+import { PageNote } from "@/components/PageNote";
 import { StakeHero } from "@/components/stake/StakeHero";
 import { StakeAgentLine } from "@/components/stake/StakeAgentLine";
 import { StakeFunding } from "@/components/stake/StakeFunding";
@@ -47,6 +48,7 @@ export default async function StakePage() {
           <StakeFunding model={fundingModel(status)} />
           <StakeAgentLine model={agentPanel(status, now)} />
         </div>
+        <PageNote repoUrl={env.repoUrl} />
       </WhiteSheet>
     </main>
   );

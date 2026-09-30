@@ -8,7 +8,7 @@ type Filter = "all" | Kind;
 const LABEL: Record<Filter, string> = { all: "All", bought: "Bought", skipped: "Skipped", waiting: "Waiting", error: "Errors" };
 const PAGE = 20;
 
-export function DecisionList({ rows, counts }: { rows: DecisionRow[]; counts: Record<Filter, number> }) {
+export function DecisionList({ rows, counts, mixed = false }: { rows: DecisionRow[]; counts: Record<Filter, number>; mixed?: boolean }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [shown, setShown] = useState(PAGE);
   const filters = (Object.keys(LABEL) as Filter[]).filter((f) => f === "all" || counts[f] > 0);
@@ -42,7 +42,7 @@ export function DecisionList({ rows, counts }: { rows: DecisionRow[]; counts: Re
                 <span className={`rounded-pill bg-white px-3 py-1 text-[12px] font-medium tracking-[0.075em] uppercase ${r.kind === "bought" ? "text-brass-ink" : r.kind === "error" ? "text-refusal" : "text-ink"}`}>{r.state}</span>
                 <span className="min-w-0 flex-1 basis-[240px] text-[16px] text-ink">
                   {r.reason}
-                  {r.dry && <span className="ml-2 text-caption text-helper">Dry run, nothing signed</span>}
+                  {r.dry && mixed && <span className="ml-2 text-caption text-helper">Dry run</span>}
                 </span>
                 <ChevronDown size={20} strokeWidth={1.75} className="shrink-0 text-helper transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
@@ -81,7 +81,7 @@ export function DecisionList({ rows, counts }: { rows: DecisionRow[]; counts: Re
                     </table>
                   </div>
                 ) : (
-                  <p className="mt-3 text-[16px] text-body">No checks ran. The run stopped before them.</p>
+                  <p className="mt-3 max-w-[560px] text-[16px] text-body">No checks ran. The run stopped before them, so nothing was bought or signed. The agent tries again on its next run. The public feed shares the state and reason, not the error text.</p>
                 )}
 
                 {r.usepod && (

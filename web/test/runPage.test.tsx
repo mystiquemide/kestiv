@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { StatusResponseSchema } from "../lib/schema";
 import type { AgentStatus } from "../lib/status";
-import { ENV_ROWS, NEVER, costRows, dryRunTranscript, initBlock, installCommands } from "../lib/runPage";
+import { ENV_ROWS, NEVER, TERMINAL_FALLBACK, costRows, dryRunTranscript, initBlock, installCommands, terminalPreview } from "../lib/runPage";
 import { LIVE_ROUTES } from "../lib/routes";
 import { RunFacts } from "../components/run/RunFacts";
 import { RunHero } from "../components/run/RunHero";
@@ -100,5 +100,25 @@ describe("run page markup", () => {
     expect(NEVER.map((n) => n.label)).toEqual(["Sell", "Cancel or move locked tokens", "Let a model pick the amount"]);
     const facts = renderToStaticMarkup(<RunFacts costs={costRows(status)} />);
     expect(facts).not.toMatch(/unmovable|will (profit|earn)/i);
+  });
+});
+
+describe("run hero terminal", () => {
+  it("shows the real command and the agent's real output, not a photo", () => {
+    const lines = terminalPreview(status);
+    expect(lines[0]).toBe("$ npm run kestiv -- run-once --dry-run");
+    expect(lines).toContain(`DRY-RUN ${run.state} ${run.reason}`);
+    expect(lines.some((l) => /^… \d+ more lines$/.test(l))).toBe(true);
+    expect(lines.at(-1)).toBe("$ npm run kestiv -- loop");
+    const html = renderToStaticMarkup(<RunHero repoUrl={undefined} terminal={lines} />);
+    expect(html).toContain('aria-label="Kestiv commands in a terminal"');
+    expect(html).toContain("DRY-RUN");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("—");
+  });
+
+  it("falls back to the three commands when the feed is down", () => {
+    expect(terminalPreview(down)).toEqual(TERMINAL_FALLBACK);
+    expect(renderToStaticMarkup(<RunHero repoUrl={undefined} />)).toContain("run-once --dry-run");
   });
 });

@@ -1,12 +1,12 @@
-import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import type { CSSProperties } from "react";
-import { PHOTOS } from "@/lib/photos";
+import { TERMINAL_FALLBACK } from "@/lib/runPage";
+import { TerminalPanel } from "./TerminalPanel";
 
 const delay = (s: number) => ({ "--d": `${s}s` }) as CSSProperties;
 
-export function RunHero({ repoUrl }: { repoUrl: string | undefined }) {
-  const photo = PHOTOS.laptopNight;
+export function RunHero({ repoUrl, terminal = TERMINAL_FALLBACK }: { repoUrl: string | undefined; terminal?: string[] }) {
   return (
     <section className="bg-band pt-[140px] pb-[120px] md:pt-[168px]">
       <div className="container-k">
@@ -20,23 +20,31 @@ export function RunHero({ repoUrl }: { repoUrl: string | undefined }) {
               Turn your creator fees into a stake you can prove.
             </p>
             <div className="rise mt-10" style={delay(0.24)}>
-              {repoUrl ? (
-                <a
-                  href={repoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-pill bg-brass px-[22px] py-[14px] text-[15px] leading-none font-medium text-ink transition-colors hover:bg-[#c8933a]"
-                >
-                  Get the code
-                  <ArrowUpRight size={18} strokeWidth={1.75} aria-hidden="true" />
-                </a>
-              ) : (
-                <p className="max-w-[420px] text-[16px] text-body">The install command shows here as soon as the code is public.</p>
-              )}
+              <div className="flex flex-wrap items-center gap-6">
+                {repoUrl ? (
+                  <a
+                    href={repoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-pill bg-brass px-[22px] py-[14px] text-[15px] leading-none font-medium text-ink transition-colors hover:bg-[#c8933a]"
+                  >
+                    Get the code
+                    <ArrowUpRight size={18} strokeWidth={1.75} aria-hidden="true" />
+                  </a>
+                ) : (
+                  <Link href="/stake" className="rounded-pill bg-brass px-[22px] py-[14px] text-[15px] leading-none font-medium text-ink transition-colors hover:bg-[#c8933a]">
+                    See a live stake
+                  </Link>
+                )}
+                <Link href="/decisions" className="inline-flex min-h-6 items-center gap-2 text-[16px] font-medium text-ink hover:underline">
+                  Read the agent&apos;s decisions
+                  <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
+                </Link>
+              </div>
             </div>
           </div>
-          <div className="rise overflow-hidden rounded-card" style={delay(0.2)}>
-            <Image src={photo.file} alt={photo.alt} width={photo.width} height={photo.height} priority sizes="(min-width: 1024px) 560px, 100vw" className="h-[280px] w-full object-cover md:h-[420px]" />
+          <div className="rise min-w-0" style={delay(0.2)}>
+            <TerminalPanel lines={terminal} />
           </div>
         </div>
       </div>

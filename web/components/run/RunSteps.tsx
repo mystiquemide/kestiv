@@ -91,6 +91,7 @@ export function RunSteps({
             <div>
               <CodeBlock lines={transcript.lines} label="dry run output" />
               <p className="mt-3 text-caption text-helper">{transcript.caption}</p>
+              <p className="mt-1 text-caption text-helper md:hidden">Scroll the box sideways to read the full lines.</p>
             </div>
           ) : (
             <div className="flex items-start gap-3 rounded-accordion bg-band p-5">

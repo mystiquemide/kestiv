@@ -30,7 +30,7 @@ export interface DecisionRow {
 }
 
 export type DecisionsModel =
-  | { kind: "rows"; rows: DecisionRow[]; counts: Record<"all" | Kind, number> }
+  | { kind: "rows"; rows: DecisionRow[]; counts: Record<"all" | Kind, number>; note: string | null; mixed: boolean }
   | { kind: "empty"; message: string }
   | { kind: "error"; message: string };
 
@@ -58,6 +58,24 @@ function usepodView(u: PublicStatus["runs"][number]["usepod"], dry: boolean, clu
   const quote = u.lamports !== null ? ` (quote ${u.lamports} lamports)` : "";
   return { verdict: null, line: dry ? `Quote only, dry run${quote}` : `${u.outcome.replace(/_/g, " ")}${quote}`, model: u.model, paidHref };
 }
+
+const list = (xs: string[]) => (xs.length <= 2 ? xs.join(" and ") : `${xs[0]}, ${xs[1]} and ${xs.length - 2} more`);
+
+/** Says once what dry runs are, instead of repeating it on every row. Null when there are none. */
+function practiceNote(dry: DecisionRow[], mixed: boolean): string | null {
+  if (dry.length === 0) return null;
+  const tokens = list([...new Set(dry.map((r) => r.token))]);
+  return mixed
+    ? `Rows marked Dry run are practice runs on ${tokens}. Nothing was signed or bought in them.`
+    : `Every run below is a practice run on ${tokens}. Nothing was signed or bought. Runs that buy and lock appear here once the agent starts buying.`;
+}
+
+/** What each state means, from the agent's own docs. */
+export const STATE_GUIDE = [
+  { state: "Waiting", text: "A rule isn't met yet, such as too little trading volume or too little in the wallet. Nothing is bought." },
+  { state: "Skipped", text: "Every rule passed, then a final check said no, such as price impact or the UsePod second opinion." },
+  { state: "Bought", text: "The agent bought a slice and locked it in the stake contract." },
+] as const;
 
 /** Every run the agent reported, newest first. Dry runs and live runs are both listed, and every dry run says so. */
 export function decisionsModel(status: AgentStatus): DecisionsModel {
@@ -90,5 +108,7 @@ export function decisionsModel(status: AgentStatus): DecisionsModel {
   rows.sort((a, b) => b.ts - a.ts);
   const counts = { all: rows.length, bought: 0, skipped: 0, waiting: 0, error: 0 };
   for (const r of rows) counts[r.kind]++;
-  return { kind: "rows", rows, counts };
+  const dry = rows.filter((r) => r.dry);
+  const mixed = dry.length > 0 && dry.length < rows.length;
+  return { kind: "rows", rows, counts, mixed, note: practiceNote(dry, mixed) };
 }

@@ -73,6 +73,17 @@ export function dryRunTranscript(status: AgentStatus): Transcript {
   return { kind: "run", caption: `Real output from the agent's ${run.dry ? "dry run" : "run"} on ${when}. Nothing was signed.`, lines };
 }
 
+export const TERMINAL_FALLBACK = [`$ ${CLI} init`, `$ ${CLI} run-once --dry-run`, `$ ${CLI} loop`];
+
+/** The hero terminal: the dry-run command, then the first lines of the agent's real output. */
+export function terminalPreview(status: AgentStatus): string[] {
+  const t = dryRunTranscript(status);
+  if (t.kind !== "run") return TERMINAL_FALLBACK;
+  const shown = t.lines.slice(0, 9);
+  const more = t.lines.length - shown.length;
+  return [`$ ${CLI} run-once --dry-run`, "", ...shown, ...(more > 0 ? [`… ${more} more lines`] : []), "", `$ ${CLI} loop`];
+}
+
 export interface CostRow {
   label: string;
   value: string;

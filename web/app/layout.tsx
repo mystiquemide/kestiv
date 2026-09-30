@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Footer } from "@/components/Footer";
 import { HideOnPaths } from "@/components/HideOnPaths";
+import { SkipLink } from "@/components/SkipLink";
 import { MotionInit } from "@/components/MotionInit";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   alternates: { canonical: "/" },
   openGraph: { type: "website", siteName: "Kestiv", title: "Kestiv · Own what you launched", description: DESCRIPTION, url: SITE },
-  twitter: { card: "summary", title: "Kestiv · Own what you launched", description: DESCRIPTION, creator: "@Kestiv_xyz" },
+  twitter: { card: "summary_large_image", title: "Kestiv · Own what you launched", description: DESCRIPTION, creator: "@Kestiv_xyz" },
   title: { default: "Kestiv · Own what you launched", template: "%s · Kestiv" },
   description: DESCRIPTION,
 };
@@ -35,8 +36,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-canvas text-ink">
+        <SkipLink />
         <Nav />
-        <div className="flex-1">{children}</div>
+        <div id="main" tabIndex={-1} className="flex-1 outline-none">
+          {children}
+        </div>
         <HideOnPaths paths={["/stake", "/run", "/decisions"]}>
           <Footer />
         </HideOnPaths>
