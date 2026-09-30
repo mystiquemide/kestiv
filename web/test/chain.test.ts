@@ -63,7 +63,7 @@ describe("escrowStep (real devnet create and topup transactions)", () => {
   });
 });
 
-const baseEnv = { heliusApiKey: "k", cluster: "mainnet-beta" as const, mint: "MINT", wallet: "WALLET", founder: FOUNDER, statusUrl: undefined };
+const baseEnv = { heliusApiKey: "k", cluster: "mainnet-beta" as const, mint: "MINT", wallet: "WALLET", founder: FOUNDER, statusUrl: undefined, repoUrl: undefined };
 const stream = (over: Partial<StreamData> = {}): StreamData => ({
   id: "STREAM",
   sender: "WALLET",

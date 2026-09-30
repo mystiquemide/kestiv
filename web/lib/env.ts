@@ -9,9 +9,12 @@ export interface ServerEnv {
   wallet: string | undefined;
   founder: string | undefined;
   statusUrl: string | undefined;
+  repoUrl: string | undefined;
 }
 
 const clean = (v: string | undefined): string | undefined => (v && v.trim() !== "" ? v.trim() : undefined);
+
+const httpsUrl = (v: string | undefined): string | undefined => (v && /^https:\/\/[^\s]+$/.test(v) ? v : undefined);
 
 export function serverEnv(env: Record<string, string | undefined> = process.env): ServerEnv {
   const cluster = clean(env.SOLANA_CLUSTER);
@@ -25,6 +28,7 @@ export function serverEnv(env: Record<string, string | undefined> = process.env)
     wallet: clean(env.KESTIV_WALLET),
     founder: clean(env.FOUNDER_WALLET),
     statusUrl: clean(env.KESTIV_STATUS_URL)?.replace(/\/+$/, ""),
+    repoUrl: httpsUrl(clean(env.KESTIV_REPO_URL)),
   };
 }
 

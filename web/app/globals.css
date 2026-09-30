@@ -1,27 +1,132 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0b0d0c;
-  --fg: #edebe4;
-  --muted: #8a8a84;
+  --canvas: #ffffff;
+  --band: #f6f6f6;
+  --ink: #1f1f1f;
+  --body: #5d5d5d;
+  --helper: #6d6d6d;
+  --line: #e7e7e7;
   --brass: #d9a441;
-  --line: #1e211f;
-  --skip: #c8553d;
+  --brass-ink: #8a6116;
+  --refusal: #b04a34;
+  --night: #0b0d0c;
+  --night-fg: #edebe4;
+  --night-muted: #8a8a84;
+  --night-line: #1e211f;
 }
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-brass: var(--brass);
+  --color-canvas: var(--canvas);
+  --color-band: var(--band);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-helper: var(--helper);
   --color-line: var(--line);
-  --color-skip: var(--skip);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brass: var(--brass);
+  --color-brass-ink: var(--brass-ink);
+  --color-refusal: var(--refusal);
+  --color-night: var(--night);
+  --color-night-fg: var(--night-fg);
+  --color-night-muted: var(--night-muted);
+  --color-night-line: var(--night-line);
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-pill: 99px;
+  --radius-card: 36px;
+  --radius-accordion: 16px;
+  --radius-image: 10px;
+
+  --shadow-float: 0 2px 100px -20px #0000001f;
+}
+
+html {
+  background: var(--canvas);
 }
 
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+@utility container-k {
+  width: 100%;
+  max-width: 1224px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@utility text-h1 {
+  font-size: 72px;
+  line-height: 1.05;
+  font-weight: 500;
+  color: var(--ink);
+  @media (max-width: 767px) {
+    font-size: 44px;
+  }
+}
+
+@utility text-h2 {
+  font-size: 56px;
+  line-height: 1.05;
+  font-weight: 500;
+  color: var(--ink);
+  @media (max-width: 767px) {
+    font-size: 36px;
+  }
+}
+
+@utility text-h3 {
+  font-size: 36px;
+  line-height: 1.15;
+  font-weight: 500;
+  color: var(--ink);
+  @media (max-width: 767px) {
+    font-size: 26px;
+  }
+}
+
+@utility text-sub {
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--body);
+}
+
+@utility text-body {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+@utility text-caption {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@utility text-eyebrow {
+  font-size: 14px;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.075em;
+}
+
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 500;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }

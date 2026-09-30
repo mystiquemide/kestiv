@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    alias: { "server-only": fileURLToPath(new URL("./test/server-only-stub.ts", import.meta.url)) },
+    alias: { "@": fileURLToPath(new URL("./", import.meta.url)), "server-only": fileURLToPath(new URL("./test/server-only-stub.ts", import.meta.url)) },
   },
-  test: { environment: "node", include: ["test/**/*.test.ts"], testTimeout: 60_000 },
+  test: { environment: "node", include: ["test/**/*.test.{ts,tsx}"], testTimeout: 60_000 },
 });
