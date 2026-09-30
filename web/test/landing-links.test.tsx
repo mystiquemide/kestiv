@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { CTA, NAV_ITEMS, SECTION_PATHS } from "../lib/nav";
@@ -26,5 +27,12 @@ describe("links to pages that don't exist", () => {
   it("who-it's-for cards render no dead links", () => {
     const html = renderToStaticMarkup(<WhoItsFor />);
     for (const m of html.matchAll(/href="(\/[a-z-]+)"/g)) expect(LIVE_ROUTES).toContain(m[1]);
+  });
+});
+
+describe("footer visibility", () => {
+  it("is hidden on the stake page only", () => {
+    const src = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+    expect(src).toContain('<HideOnPaths paths={["/stake"]}>');
   });
 });

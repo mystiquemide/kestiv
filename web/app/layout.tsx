@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Footer } from "@/components/Footer";
+import { HideOnPaths } from "@/components/HideOnPaths";
 import { MotionInit } from "@/components/MotionInit";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
@@ -36,7 +37,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-canvas text-ink">
         <Nav />
         <div className="flex-1">{children}</div>
-        <Footer />
+        <HideOnPaths paths={["/stake"]}>
+          <Footer />
+        </HideOnPaths>
         <MotionInit />
       </body>
     </html>
