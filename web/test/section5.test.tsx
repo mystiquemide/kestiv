@@ -84,12 +84,12 @@ describe("faq", () => {
 
 describe("buttons to pages that don't exist", () => {
   it("render only when their route is live", () => {
-    for (const r of ["/decisions", "/run"]) expect(routeLive(r), r).toBe(false);
-    expect(routeLive("/stake")).toBe(true);
+    expect(routeLive("/decisions")).toBe(false);
+    for (const r of ["/stake", "/run"]) expect(routeLive(r), r).toBe(true);
     expect(renderToStaticMarkup(<PhotoBand />)).not.toContain("/decisions");
     const cta = renderToStaticMarkup(<ClosingCta />);
     expect(cta).toContain("Start owning what you launched.");
-    expect(cta).not.toContain('href="/run"');
+    expect(cta).toContain('href="/run"');
     expect(cta).toContain('href="/stake"');
   });
 
