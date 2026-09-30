@@ -37,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-canvas text-ink">
         <Nav />
         <div className="flex-1">{children}</div>
-        <HideOnPaths paths={["/stake"]}>
+        <HideOnPaths paths={["/stake", "/run", "/decisions"]}>
           <Footer />
         </HideOnPaths>
         <MotionInit />

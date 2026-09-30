@@ -31,8 +31,8 @@ describe("links to pages that don't exist", () => {
 });
 
 describe("footer visibility", () => {
-  it("is hidden on the stake page only", () => {
+  it("is hidden on the stake, run and decisions pages", () => {
     const src = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
-    expect(src).toContain('<HideOnPaths paths={["/stake"]}>');
+    expect(src).toContain('<HideOnPaths paths={["/stake", "/run", "/decisions"]}>');
   });
 });
