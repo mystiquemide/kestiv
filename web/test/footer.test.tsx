@@ -9,8 +9,8 @@ const labels = (input: Parameters<typeof footerSections>[0]) => footerSections(i
 describe("footer link visibility", () => {
   it("not launched and no wallet: no proof section at all", () => {
     const i = { stake: { state: "not_launched" }, env: { cluster: "mainnet-beta" as const } };
-    expect(footerSections(i).map((s) => s.heading)).toEqual(["Follow"]);
-    expect(labels(i)).toEqual(["X @Kestiv_xyz"]);
+    expect(footerSections(i).map((s) => s.heading)).toEqual(["Product", "Follow"]);
+    expect(labels(i)).toEqual(["Stake", "X @Kestiv_xyz"]);
   });
 
   it("not launched with a wallet: wallet link only, no contract and no pump.fun", () => {
