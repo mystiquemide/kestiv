@@ -1,3 +1,7 @@
+import { PhotoBand } from "@/components/band/PhotoBand";
+import { Faq } from "@/components/faq/Faq";
+import { ClosingCta } from "@/components/faq/ClosingCta";
+import { Verify } from "@/components/verify/Verify";
 import { HeroBand } from "@/components/hero/HeroBand";
 import { BuiltOn } from "@/components/built/BuiltOn";
 import { HowItWorks } from "@/components/how/HowItWorks";
@@ -11,6 +15,7 @@ import { protectionModel } from "@/lib/protection";
 import { buyCard, checksCard, feesCard, lockCard } from "@/lib/howItWorks";
 import { getAgentStatus } from "@/lib/status";
 import { nowSec } from "@/lib/time";
+import { verifyModel } from "@/lib/verify";
 
 export default async function Home() {
   const env = serverEnv();
@@ -46,6 +51,10 @@ export default async function Home() {
         <WhoItsFor />
         <Protection model={protectionModel({ status, stake, proof, repoUrl: env.repoUrl })} />
         <BuiltOn />
+        <PhotoBand />
+        <Verify model={verifyModel({ stake, status, proof, env: { cluster: env.cluster, wallet: env.wallet }, now })} />
+        <Faq />
+        <ClosingCta />
       </WhiteSheet>
     </main>
   );
