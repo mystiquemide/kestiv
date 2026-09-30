@@ -161,6 +161,7 @@ export async function runOnce(ports: Ports): Promise<RunResult> {
       minOutAmount: quote.minOutAmount.toString(),
       priceImpact: quote.priceImpact,
       route: quote.routeLabels,
+      decimals: info.decimals,
     };
     decision = decide(inputs, policy);
     if (!dry && decision.action !== "CONTINUE") return stop(decision);

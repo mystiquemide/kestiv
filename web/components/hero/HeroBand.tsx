@@ -15,7 +15,7 @@ export interface HeroModels {
 
 export function HeroBand({ stake, agent, lock }: HeroModels) {
   return (
-    <section className="bg-band pt-[168px] pb-24">
+    <section className="bg-band pt-[168px] pb-[156px]">
       <div className="container-k">
         <div className="mx-auto flex max-w-[880px] flex-col items-center text-center">
           <h1 className="text-h1">Own what you launched.</h1>

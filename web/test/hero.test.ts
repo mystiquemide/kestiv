@@ -132,7 +132,7 @@ describe("agent panel", () => {
     expect(m.checks.map((c) => c.label)).toEqual(["Holders", "24h volume", "Price impact", "Buy size"]);
     const byLabel = Object.fromEntries(m.checks.map((c) => [c.label, c]));
     expect(byLabel["Holders"]).toEqual({ label: "Holders", value: "129", threshold: "min 25", pass: true });
-    expect(byLabel["24h volume"]).toEqual({ label: "24h volume", value: "$2,819", threshold: "min $2,000", pass: true });
+    expect(byLabel["24h volume"]).toEqual({ label: "24h volume", value: "at least $2,819", threshold: "min $2,000", pass: true });
     expect(byLabel["Price impact"]).toEqual({ label: "Price impact", value: "1.64%", threshold: "max 2.5%", pass: true });
     expect(byLabel["Buy size"]).toEqual({ label: "Buy size", value: "0 SOL", threshold: "min 0.05 SOL", pass: false });
     expect(m.total).toBe(11);

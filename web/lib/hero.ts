@@ -1,7 +1,8 @@
 import type { DevnetProof, StakeView, StreamFlags } from "./chain";
 import { DEVNET_PROOF } from "./chain";
 import { solscanAccount, solscanTx, streamflowUrl, type LinkCluster } from "./links";
-import { dateUtc, formatFractionPct, formatInt, formatStakePct, formatUsd, shortAddress, solFromLamports, tokensCompact } from "./format";
+import { dateUtc, formatStakePct, shortAddress, solFromLamports, tokensCompact } from "./format";
+import { gateView } from "./gates";
 import type { PublicStatus } from "./schema";
 import type { AgentStatus } from "./status";
 import { STALE_AFTER_SEC, timeAgo } from "./time";
@@ -175,35 +176,7 @@ export type AgentPanelModel =
       stale: string | null;
     };
 
-type Gate = PublicStatus["gates"][number];
-
-const num = (v: Gate["value"]): number | null => (typeof v === "number" ? v : v === null ? null : Number.isFinite(Number(v)) ? Number(v) : null);
-
-const CHECKS: { name: string; label: string; fmt: (g: Gate) => { value: string; threshold: string } }[] = [
-  {
-    name: "holders",
-    label: "Holders",
-    fmt: (g) => ({ value: num(g.value) === null ? "n/a" : formatInt(num(g.value)!), threshold: `min ${formatInt(Number(g.threshold))}` }),
-  },
-  {
-    name: "volume_24h_usd",
-    label: "24h volume",
-    fmt: (g) => ({ value: num(g.value) === null ? "n/a" : formatUsd(num(g.value)!), threshold: `min ${formatUsd(Number(g.threshold))}` }),
-  },
-  {
-    name: "price_impact",
-    label: "Price impact",
-    fmt: (g) => ({ value: num(g.value) === null ? "n/a" : formatFractionPct(num(g.value)!), threshold: `max ${formatFractionPct(Number(g.threshold))}` }),
-  },
-  {
-    name: "slice_lamports",
-    label: "Buy size",
-    fmt: (g) => ({
-      value: num(g.value) === null ? "n/a" : `${solFromLamports(num(g.value)!)} SOL`,
-      threshold: `min ${solFromLamports(Number(g.threshold))} SOL`,
-    }),
-  },
-];
+const HERO_CHECKS = ["holders", "volume_24h_usd", "price_impact", "slice_lamports"];
 
 export function agentPanel(status: AgentStatus, nowSec: number): AgentPanelModel {
   if (!status.ok) {
@@ -217,10 +190,11 @@ export function agentPanel(status: AgentStatus, nowSec: number): AgentPanelModel
 
   const { run, source } = picked;
   const checks: CheckRow[] = [];
-  for (const c of CHECKS) {
-    const g = run.gates.find((x) => x.name === c.name);
+  for (const name of HERO_CHECKS) {
+    const g = run.gates.find((x) => x.name === name);
     if (!g) continue;
-    checks.push({ label: c.label, ...c.fmt(g), pass: g.pass });
+    const v = gateView(g);
+    checks.push({ label: v.label, value: v.value, threshold: v.threshold, pass: v.pass });
   }
   const passed = run.gates.filter((g) => g.pass).length;
   const age = nowSec - run.ts;

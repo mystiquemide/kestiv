@@ -9,6 +9,13 @@ const gate = z.object({
   pass: z.boolean(),
   source: z.string().optional(),
 });
+const quote = z.object({
+  inLamports: lamports,
+  outAmount: lamports,
+  priceImpact: z.number(),
+  route: z.array(z.string()),
+  decimals: z.number().nullable().default(null),
+});
 const usepod = z.object({
   outcome: z.string(),
   verdict: z.enum(["buy", "skip"]).nullable(),
@@ -39,6 +46,7 @@ export const PublicStatusSchema = z.object({
     })
     .nullable(),
   txs: z.array(z.string()),
+  quote: quote.nullable().default(null),
   wallet: z.string(),
   founder: z.string(),
   contractId: z.string().nullable(),
@@ -52,6 +60,7 @@ export const PublicStatusSchema = z.object({
     minHolders: z.number(),
     minVolume24hUsd: z.number(),
     stakeShareBps: z.number(),
+    liquidityShareBps: z.number().default(100),
   }),
   latest: z.object({
     buySig: z.string().nullable(),
@@ -82,6 +91,7 @@ export const PublicStatusSchema = z.object({
       mint: z.string(),
       gates: z.array(gate),
       txs: z.array(z.string()),
+      quote: quote.nullable().default(null),
       usepod: usepod.nullable(),
     }),
   ),

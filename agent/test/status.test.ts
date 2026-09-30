@@ -117,6 +117,52 @@ describe("buildPublicStatus", () => {
   });
 });
 
+describe("quote in the public status", () => {
+  const storedQuote = { inLamports: "50000000", outAmount: "1391957525637", minOutAmount: "1", priceImpact: 0.0164, route: ["Pump.fun"], decimals: 6 };
+  const publicQuote = { inLamports: "50000000", outAmount: "1391957525637", priceImpact: 0.0164, route: ["Pump.fun"], decimals: 6 };
+
+  it("exposes the latest run's quote at the top level without the internal minOutAmount", () => {
+    const s = build(Store.open(":memory:"), { details: { quote: storedQuote } });
+    expect(s.quote).toEqual(publicQuote);
+    expect(JSON.stringify(s)).not.toContain("minOutAmount");
+  });
+
+  it("is null when the run stopped before quoting, at the top level and in history", () => {
+    const st = Store.open(":memory:");
+    st.insertRun({ state: "WAITING", reason: "cooldown", details: { gates: [] }, txs: [], ts: 1 });
+    const s = build(st, { details: {} });
+    expect(s.quote).toBeNull();
+    expect(s.runs[0]?.quote).toBeNull();
+  });
+
+  it("keeps each run's quote through the store round trip, newest first", () => {
+    const st = Store.open(":memory:");
+    st.insertRun({ state: "WAITING", reason: "a", details: { quote: { ...storedQuote, inLamports: "1" } }, txs: [], ts: 1 });
+    st.insertRun({ state: "SKIPPED", reason: "b", details: { quote: storedQuote }, txs: [], ts: 2 });
+    st.insertRun({ state: "WAITING", reason: "c", details: {}, txs: [], ts: 3 });
+    const s = build(st, { details: {} });
+    expect(s.runs.map((r) => r.quote?.inLamports ?? null)).toEqual([null, "50000000", "1"]);
+  });
+
+  it("puts liquidityShareBps in the public policy", () => {
+    expect(build(Store.open(":memory:")).policy.liquidityShareBps).toBe(100);
+  });
+
+  it("still parses status files written before quote and liquidityShareBps existed", () => {
+    const { quote: _q, ...rest } = build(Store.open(":memory:")) as Record<string, unknown>;
+    const old = { ...rest, policy: { ...(rest.policy as object) }, runs: [] } as Record<string, unknown>;
+    delete (old.policy as Record<string, unknown>).liquidityShareBps;
+    const parsed = PublicStatusSchema.parse(old);
+    expect(parsed.quote).toBeNull();
+    expect(parsed.policy.liquidityShareBps).toBe(100);
+  });
+
+  it("rejects a malformed quote", () => {
+    const good = build(Store.open(":memory:"));
+    expect(PublicStatusSchema.safeParse({ ...good, quote: { inLamports: "x" } }).success).toBe(false);
+  });
+});
+
 describe("status files and server", () => {
   const servers: ReturnType<typeof createStatusServer>[] = [];
   afterEach(() => {

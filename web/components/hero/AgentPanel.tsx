@@ -37,12 +37,12 @@ export function AgentPanel({ model, className = "" }: { model: AgentPanelModel; 
       <ul className="mt-6 border-t border-line">
         {model.checks.map((c) => (
           <li key={c.label} className="flex min-h-12 items-center justify-between gap-4 border-b border-line">
-            <div>
+            <div className="min-w-0">
               <p className="text-[15px] leading-tight text-ink">{c.label}</p>
               <p className="text-[13px] leading-tight text-helper">{c.threshold}</p>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="num text-[16px] text-ink">{c.value}</span>
+            <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+              <span className="num text-[14px] whitespace-nowrap text-ink sm:text-[16px]">{c.value}</span>
               <span className={`flex w-14 items-center gap-1 text-[14px] ${c.pass ? "text-ink" : "text-refusal"}`}>
                 {c.pass ? (
                   <Check size={16} strokeWidth={1.75} aria-hidden="true" />

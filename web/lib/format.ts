@@ -19,7 +19,7 @@ export function dateUtc(tsSec: number): string {
 export function solFromLamports(lamports: number): string {
   const sol = lamports / 1e9;
   if (sol === 0) return "0";
-  return Number(sol.toFixed(sol < 1 ? 4 : 2)).toString();
+  return Number(sol.toFixed(4)).toString();
 }
 
 export const formatInt = (n: number): string => int.format(n);
@@ -35,3 +35,21 @@ export function formatFractionPct(f: number): string {
 
 /** Percent string from the chain view ("1.5000") to two decimals. */
 export const formatStakePct = (pct: string): string => `${Number(pct).toFixed(2)}%`;
+
+/** Lamports as SOL for amounts that can be tiny (UsePod costs), trimmed of trailing zeros. */
+export function solTiny(lamports: number): string {
+  if (lamports === 0) return "0";
+  return (lamports / 1e9).toFixed(9).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+/** Raw token amount with thousands separators and up to two decimals ("150,000"). */
+export function tokensFull(raw: string, decimals: number): string {
+  const v = Number(BigInt(raw)) / 10 ** decimals;
+  return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+export function formatUsdSmall(n: number): string {
+  if (n >= 1) return formatUsd(n);
+  const digits = Math.min(12, Math.ceil(-Math.log10(n)) + 2);
+  return `$${n.toFixed(digits)}`;
+}

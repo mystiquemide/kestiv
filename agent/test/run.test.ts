@@ -419,6 +419,7 @@ describe("dry run", () => {
     h.ports.usepod.verdict = async () => ({ outcome: "dry_run_quote_only", quote: { quoteId: "q", network: "n", payTo: "p", lamports: 100 } });
     const r = await runOnce(h.ports);
     expect(r.state).toBe("WOULD_BUY");
+    expect(r.details.quote).toMatchObject({ inLamports: "500000000", decimals: 6, route: ["Pump.fun"] });
     expect(r.details.actions as string[]).toEqual(expect.arrayContaining([expect.stringMatching(/^DRY-RUN would buy 500000000 lamports/)]));
     expect(h.calls).toEqual([]);
     expect(h.store.listInflows()).toHaveLength(0);

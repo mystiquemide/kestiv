@@ -12,6 +12,13 @@ const gate = z.object({
   pass: z.boolean(),
   source: z.string().optional(),
 });
+const quote = z.object({
+  inLamports: lamports,
+  outAmount: lamports,
+  priceImpact: z.number(),
+  route: z.array(z.string()),
+  decimals: z.number().nullable().default(null),
+});
 const usepod = z.object({
   outcome: z.string(),
   verdict: z.enum(["buy", "skip"]).nullable(),
@@ -42,6 +49,7 @@ export const PublicStatusSchema = z.object({
     })
     .nullable(),
   txs: z.array(z.string()),
+  quote: quote.nullable().default(null),
   wallet: z.string(),
   founder: z.string(),
   contractId: z.string().nullable(),
@@ -55,6 +63,7 @@ export const PublicStatusSchema = z.object({
     minHolders: z.number(),
     minVolume24hUsd: z.number(),
     stakeShareBps: z.number(),
+    liquidityShareBps: z.number().default(100),
   }),
   latest: z.object({
     buySig: z.string().nullable(),
@@ -85,6 +94,7 @@ export const PublicStatusSchema = z.object({
       mint: z.string(),
       gates: z.array(gate),
       txs: z.array(z.string()),
+      quote: quote.nullable().default(null),
       usepod: usepod.nullable(),
     }),
   ),
@@ -115,6 +125,19 @@ const parseJson = <T>(raw: string | null, fallback: T): T => {
 
 const nullable = <T>(v: T | null | undefined): T | null => (v === undefined ? null : v);
 
+interface StoredQuote {
+  inLamports?: string;
+  outAmount?: string;
+  priceImpact?: number;
+  route?: string[];
+  decimals?: number;
+}
+
+const toQuote = (q: StoredQuote | undefined) =>
+  q && q.inLamports !== undefined && q.outAmount !== undefined && typeof q.priceImpact === "number" && Array.isArray(q.route)
+    ? { inLamports: q.inLamports, outAmount: q.outAmount, priceImpact: q.priceImpact, route: q.route, decimals: q.decimals ?? null }
+    : null;
+
 interface StoredUsepod {
   outcome?: string;
   verdict?: "buy" | "skip";
@@ -136,7 +159,7 @@ export interface BuildInput {
 
 export function buildPublicStatus(i: BuildInput): PublicStatus {
   const { store, result, policy } = i;
-  const details = result.details as { gates?: unknown; stake?: unknown };
+  const details = result.details as { gates?: unknown; stake?: unknown; quote?: StoredQuote };
 
   const slices = store.allSlices();
   const lastBuy = slices.find((s) => s.buy_sig);
@@ -147,7 +170,7 @@ export function buildPublicStatus(i: BuildInput): PublicStatus {
   const nextRunAt = i.nextRunAt ?? (cooldown > i.nowSec ? cooldown : null);
 
   const runs = store.recentRuns(RUN_LIMIT).map((r) => {
-    const d = parseJson<{ dry?: boolean; mint?: string; gates?: unknown; usepod?: StoredUsepod }>(r.details, {});
+    const d = parseJson<{ dry?: boolean; mint?: string; gates?: unknown; quote?: StoredQuote; usepod?: StoredUsepod }>(r.details, {});
     const u = d.usepod;
     return {
       id: r.id,
@@ -158,6 +181,7 @@ export function buildPublicStatus(i: BuildInput): PublicStatus {
       mint: d.mint ?? "",
       gates: Array.isArray(d.gates) ? d.gates : [],
       txs: parseJson<string[]>(r.txs, []),
+      quote: toQuote(d.quote),
       usepod: u?.outcome
         ? {
             outcome: u.outcome,
@@ -183,6 +207,7 @@ export function buildPublicStatus(i: BuildInput): PublicStatus {
     stake: details.stake ?? null,
     budget: result.budget ?? null,
     txs: result.txs,
+    quote: toQuote(details.quote),
     wallet: i.cfg.KESTIV_WALLET,
     founder: i.cfg.FOUNDER_WALLET,
     contractId: store.getConfig("contract_id") ?? null,
@@ -196,6 +221,7 @@ export function buildPublicStatus(i: BuildInput): PublicStatus {
       minHolders: policy.minHolders,
       minVolume24hUsd: policy.minVolume24hUsd,
       stakeShareBps: policy.stakeShareBps,
+      liquidityShareBps: policy.liquidityShareBps,
     },
     latest: {
       buySig: lastBuy?.buy_sig ?? null,
