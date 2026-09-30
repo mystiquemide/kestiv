@@ -40,7 +40,7 @@ I did not build a launchpad, a staking dashboard, or a lockup you have to trust.
 | What the judges look at | Where Kestiv stands |
 |---|---|
 | Onchain volume | Every slice is a real Jupiter swap of the token, signed by the agent. None yet: the token launches on 1 Oct |
-| Builders onboarded | Any ClawPump builder can run it on their own token. There is a [six-step guide](https://kestiv.midelabs.xyz/run) and a Hermes skill in [`skill/kestiv`](skill/kestiv/SKILL.md). The pull request to Clawpump/agents-skills is pending |
+| Builders onboarded | Any ClawPump builder can run it on their own token. There is a [six-step guide](https://kestiv.midelabs.xyz/run) and a Hermes skill in [`skill/kestiv`](skill/kestiv/SKILL.md). The pull request to Clawpump/agents-skills is [open](https://github.com/Clawpump/agents-skills/pull/16) |
 | Attention | Every decision, skip and lock is public on the [decisions page](https://kestiv.midelabs.xyz/decisions) and on X |
 | Deploy early | Site, agent and devnet proof are live since 30 Sep 2026 |
 
@@ -112,7 +112,7 @@ None on mainnet yet. The agent has run practice runs against a live pump.fun tok
 
 ## What's real
 
-Real: the devnet contract and its transactions, the chain reads, the agent's checks, the practice runs against a live token, the site, and the tests. Pending: the mainnet token, live buys and locks, paid UsePod verdicts, and the agents-skills pull request. There are no mocked numbers on the site.
+Real: the devnet contract and its transactions, the chain reads, the agent's checks, the practice runs against a live token, the site, and the tests. Pending: the mainnet token, live buys and locks, paid UsePod verdicts, and the agents-skills pull request being merged. There are no mocked numbers on the site.
 
 Tests: 180 in `agent/`, 233 in `web/`. Run `npm test` from the root.
 
