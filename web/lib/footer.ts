@@ -1,10 +1,11 @@
-import { PHOTO_LIST } from "./photos";
 import { X_URL, pumpFunCoin, solscanAccount, streamflowUrl, type LinkCluster } from "./links";
 
 export interface FooterLinkSpec {
   label: string;
   href: string;
   external: boolean;
+  /** Rendered as a logo instead of text. The label stays as the accessible name. */
+  icon?: "x" | "github";
 }
 
 export interface FooterSection {
@@ -28,8 +29,8 @@ export function footerSections({ stake, env }: FooterInput): FooterSection[] {
     proof.push({ label: "$KESTIV on pump.fun", href: pumpFunCoin(env.mint), external: true });
   }
 
-  const follow: FooterLinkSpec[] = [{ label: "X @Kestiv_xyz", href: X_URL, external: true }];
-  if (env.repoUrl) follow.push({ label: "GitHub", href: env.repoUrl, external: true });
+  const follow: FooterLinkSpec[] = [{ label: "X @Kestiv_xyz", href: X_URL, external: true, icon: "x" }];
+  if (env.repoUrl) follow.push({ label: "GitHub", href: env.repoUrl, external: true, icon: "github" });
 
   const sections: FooterSection[] = [
     {
@@ -45,8 +46,3 @@ export function footerSections({ stake, env }: FooterInput): FooterSection[] {
   sections.push({ heading: "Follow", links: follow });
   return sections;
 }
-
-export const photoCredits = () =>
-  PHOTO_LIST.map((p) => ({ name: p.photographer, href: p.profileUrl })).filter(
-    (c, i, all) => all.findIndex((o) => o.href === c.href) === i,
-  );

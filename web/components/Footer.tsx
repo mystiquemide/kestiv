@@ -1,12 +1,12 @@
 import Link from "next/link";
+import { GitHubIcon, XIcon } from "./BrandIcons";
 import { FooterLogo } from "./Logo";
 import { getStakeView, type StakeView } from "@/lib/chain";
 import { serverEnv } from "@/lib/env";
-import { footerSections, photoCredits, type FooterInput } from "@/lib/footer";
+import { footerSections, type FooterInput } from "@/lib/footer";
 
 export function FooterView({ stake, env }: FooterInput) {
   const sections = footerSections({ stake, env });
-  const credits = photoCredits();
   const linkClass = "rounded-image text-[16px] text-ink hover:underline";
 
   return (
@@ -21,12 +21,18 @@ export function FooterView({ stake, env }: FooterInput) {
           {sections.map((section) => (
             <div key={section.heading}>
               <h2 className="text-eyebrow font-medium text-helper">{section.heading}</h2>
-              <ul className="mt-4 flex flex-col gap-3">
+              <ul className={`mt-4 flex gap-3 ${section.links.every((l) => l.icon) ? "flex-row items-center gap-5" : "flex-col"}`}>
                 {section.links.map((l) => (
                   <li key={l.href}>
                     {l.external ? (
-                      <a href={l.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
-                        {l.label}
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={linkClass}
+                        {...(l.icon ? { "aria-label": l.label, title: l.label } : {})}
+                      >
+                        {l.icon === "x" ? <XIcon /> : l.icon === "github" ? <GitHubIcon /> : l.label}
                       </a>
                     ) : (
                       <Link href={l.href} className={linkClass}>
@@ -42,18 +48,6 @@ export function FooterView({ stake, env }: FooterInput) {
 
         <div className="mt-16 border-t border-line pt-8">
           <p className="text-caption text-helper">Kestiv never sells. Nothing here is financial advice.</p>
-          <p className="mt-2 text-caption text-helper">
-            Photos on Unsplash by{" "}
-            {credits.map((c, i) => (
-              <span key={c.href}>
-                <a href={c.href} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                  {c.name}
-                </a>
-                {i < credits.length - 1 ? ", " : ""}
-              </span>
-            ))}
-            .
-          </p>
         </div>
       </div>
     </footer>

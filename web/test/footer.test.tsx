@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FooterView } from "../components/Footer";
-import { footerSections, photoCredits } from "../lib/footer";
+import { footerSections } from "../lib/footer";
 
 const hrefs = (input: Parameters<typeof footerSections>[0]) => footerSections(input).flatMap((s) => s.links.map((l) => l.href));
 const labels = (input: Parameters<typeof footerSections>[0]) => footerSections(input).flatMap((s) => s.links.map((l) => l.label));
@@ -61,7 +61,7 @@ describe("footer link visibility", () => {
       <FooterView stake={{ state: "active", contractId: "S" }} env={{ cluster: "mainnet-beta", wallet: "W", mint: "M" }} />,
     );
     const anchors = html.match(/<a [^>]*href="https?:[^>]*>/g) ?? [];
-    expect(anchors.length).toBeGreaterThan(6);
+    expect(anchors.length).toBeGreaterThanOrEqual(4);
     for (const a of anchors) {
       expect(a).toContain('target="_blank"');
       expect(a).toContain('rel="noopener noreferrer"');
@@ -80,10 +80,21 @@ describe("footer theme", () => {
   });
 });
 
-describe("photo credits", () => {
-  it("lists each photographer once with a utm-tagged profile link", () => {
-    const c = photoCredits();
-    expect(c.map((x) => x.name)).toEqual(["Nedim", "Alesia Kazantceva", "Blake Connally", "David Klein"]);
-    for (const x of c) expect(x.href).toMatch(/^https:\/\/unsplash\.com\/@[a-z]+\?utm_source=kestiv&utm_medium=referral$/);
+describe("follow icons and credits", () => {
+  it("shows X and GitHub as logos with accessible names, and no photo credit line", () => {
+    const html = renderToStaticMarkup(
+      <FooterView stake={{ state: "not_launched" }} env={{ cluster: "mainnet-beta", repoUrl: "https://github.com/x/kestiv" }} />,
+    );
+    expect(html).toContain('aria-label="X @Kestiv_xyz"');
+    expect(html).toContain('aria-label="GitHub"');
+    expect(html.match(/<svg/g)!.length).toBeGreaterThanOrEqual(3);
+    expect(html).not.toContain("Unsplash");
+    expect(html).not.toContain("Photos on");
+  });
+
+  it("leaves GitHub out until a repo url is set", () => {
+    const html = renderToStaticMarkup(<FooterView stake={{ state: "not_launched" }} env={{ cluster: "mainnet-beta" }} />);
+    expect(html).toContain('aria-label="X @Kestiv_xyz"');
+    expect(html).not.toContain('aria-label="GitHub"');
   });
 });
