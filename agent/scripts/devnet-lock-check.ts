@@ -1,17 +1,28 @@
 // Devnet proof of the founder vesting lock. Sends devnet transactions only.
 // run: KESTIV_ENV_FILE=/path/to/env npx tsx scripts/devnet-lock-check.ts [--stream <id>] [--probe-flags]
+// --token-2022 runs the whole flow on a Token-2022 mint with the same extensions a pump.fun token has (metadata pointer + on-mint metadata).
 // --stream <id> skips mint/create/topup and checks an existing stream (read, terms, onchain cancel attempt).
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import {
+  AuthorityType,
+  ExtensionType,
+  LENGTH_SIZE,
+  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
+  TYPE_SIZE,
+  createInitializeMetadataPointerInstruction,
+  createInitializeMintInstruction,
   createMint,
+  getMintLen,
   getOrCreateAssociatedTokenAccount,
   mintTo,
+  setAuthority,
 } from "@solana/spl-token";
+import { createInitializeInstruction, pack } from "@solana/spl-token-metadata";
 import { buildTransaction, cancel } from "@streamflow/stream";
 import { readEnv } from "../src/config.js";
 import { createChain } from "../src/chain/connection.js";
@@ -85,18 +96,15 @@ async function ensureFunds(minSol: number) {
 async function attemptOnchainCancel(streamId: string, ctx: { connection: typeof connection; cluster: typeof chain.cluster }) {
   const before = await readFounderVesting(connection, chain.cluster, streamId);
   const built = await cancel({ id: streamId }, { publicKey: payer.publicKey }, sdkEnv(ctx));
-  const { transaction, blockhashWithExpiryBlockHeight } = await buildTransaction(built.instructions, { feePayer: payer.publicKey }, sdkEnv(ctx));
+  const { transaction } = await buildTransaction(built.instructions, { feePayer: payer.publicKey }, sdkEnv(ctx));
   let signature = "";
   let sendError = "";
+  // Deliberately bypasses Kestiv's signer, which refuses every Streamflow instruction but create and top-up.
+  // The point here is to show that the chain itself rejects a cancel, even one Kestiv would never sign.
   try {
-    await signAndSend(transaction, payer, connection, ALLOWED_PROGRAMS, {
-      blockhash: blockhashWithExpiryBlockHeight,
-      skipPreflight: true,
-      onSigned: (sig) => {
-        signature = sig;
-      },
-    });
-    check(false, `cancel unexpectedly succeeded: ${tx(signature)}`);
+    if ("message" in transaction) transaction.sign([payer]);
+    else transaction.sign(payer);
+    signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true });
   } catch (e) {
     sendError = e instanceof Error ? e.message.replace(/api-key=[^&\s"']+/gi, "api-key=<redacted>") : String(e);
   }
@@ -144,9 +152,31 @@ if (existingStream) {
 await ensureFunds(1);
 console.log(`balance ${(await connection.getBalance(payer.publicKey)) / LAMPORTS_PER_SOL} SOL`);
 
-const mint = await createMint(connection, payer, payer.publicKey, null, DECIMALS, undefined, { commitment: "confirmed" }, TOKEN_PROGRAM_ID);
-const ata = await getOrCreateAssociatedTokenAccount(connection, payer, mint, payer.publicKey, false, "confirmed");
-const mintSig = await mintTo(connection, payer, mint, ata.address, payer, 1_000_000n * UNIT, [], { commitment: "confirmed" });
+const use2022 = argv.includes("--token-2022");
+const program = use2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+console.log(`token program ${use2022 ? "Token-2022 (metadata pointer + on-mint metadata)" : "SPL Token"}`);
+
+async function makeMint(): Promise<PublicKey> {
+  if (!use2022) return createMint(connection, payer, payer.publicKey, null, DECIMALS, undefined, { commitment: "confirmed" }, TOKEN_PROGRAM_ID);
+  const mintKp = Keypair.generate();
+  const meta = { mint: mintKp.publicKey, name: "Kestiv Test", symbol: "KTEST", uri: "https://kestiv.midelabs.xyz/", additionalMetadata: [] as [string, string][], updateAuthority: payer.publicKey };
+  const mintLen = getMintLen([ExtensionType.MetadataPointer]);
+  const metaLen = TYPE_SIZE + LENGTH_SIZE + pack(meta).length;
+  const lamports = await connection.getMinimumBalanceForRentExemption(mintLen + metaLen);
+  const initTx = new Transaction().add(
+    SystemProgram.createAccount({ fromPubkey: payer.publicKey, newAccountPubkey: mintKp.publicKey, space: mintLen, lamports, programId: TOKEN_2022_PROGRAM_ID }),
+    createInitializeMetadataPointerInstruction(mintKp.publicKey, payer.publicKey, mintKp.publicKey, TOKEN_2022_PROGRAM_ID),
+    createInitializeMintInstruction(mintKp.publicKey, DECIMALS, payer.publicKey, null, TOKEN_2022_PROGRAM_ID),
+    createInitializeInstruction({ programId: TOKEN_2022_PROGRAM_ID, mint: mintKp.publicKey, metadata: mintKp.publicKey, name: meta.name, symbol: meta.symbol, uri: meta.uri, mintAuthority: payer.publicKey, updateAuthority: payer.publicKey }),
+  );
+  await sendAndConfirmTransaction(connection, initTx, [payer, mintKp], { commitment: "confirmed" });
+  return mintKp.publicKey;
+}
+
+const mint = await makeMint();
+const ata = await getOrCreateAssociatedTokenAccount(connection, payer, mint, payer.publicKey, false, "confirmed", undefined, program);
+const mintSig = await mintTo(connection, payer, mint, ata.address, payer, 1_000_000n * UNIT, [], { commitment: "confirmed" }, program);
+if (use2022) await setAuthority(connection, payer, mint, payer, AuthorityType.MintTokens, null, [], { commitment: "confirmed" }, program);
 console.log(`mint ${mint.toBase58()}  minted 1,000,000: ${tx(mintSig)}`);
 
 const amount = 100_000n * UNIT;
@@ -155,7 +185,7 @@ const { streamId, signature: createSig } = await createFounderVesting({
   ...ctx,
   sender: payer,
   mint,
-  tokenProgram: TOKEN_PROGRAM_ID,
+  tokenProgram: program,
   amount,
   recipient,
 });
