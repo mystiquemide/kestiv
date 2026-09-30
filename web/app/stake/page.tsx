@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { WhiteSheet } from "@/components/sheet/WhiteSheet";
 import { StakeHero } from "@/components/stake/StakeHero";
+import { StakeStats } from "@/components/stake/StakeStats";
 import { StakeLock } from "@/components/stake/StakeLock";
 import { getDevnetProof, getMintSupply, getStakeView, type DevnetProof } from "@/lib/chain";
 import { serverEnv } from "@/lib/env";
 import { stakeHero } from "@/lib/stakePage";
+import { stakeStats } from "@/lib/stakeStats";
 import { stakeChartCard } from "@/lib/stakeChart";
 import { getAgentStatus } from "@/lib/status";
 import { nowSec } from "@/lib/time";
@@ -24,13 +26,18 @@ export default async function StakePage() {
   ]);
 
   const devnetDecimals = proof ? await getMintSupply(proof.stream.mint, "devnet").then((m) => m.decimals).catch(() => null) : null;
-  const card = stakeChartCard({ stake, proof, devnetDecimals, now: nowSec() });
+  const now = nowSec();
+  const card = stakeChartCard({ stake, proof, devnetDecimals, now });
+  const stats = stakeStats({ stake, status, proof, devnetDecimals, now });
 
   return (
     <main>
       <StakeHero model={stakeHero({ stake, status, proof, env: { cluster: env.cluster, wallet: env.wallet, founder: env.founder } })} />
       <WhiteSheet>
-        <StakeLock card={card} />
+        <div className="flex flex-col gap-12">
+          <StakeLock card={card} />
+          <StakeStats model={stats} />
+        </div>
       </WhiteSheet>
     </main>
   );
