@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { WhiteSheet } from "@/components/sheet/WhiteSheet";
 import { StakeHero } from "@/components/stake/StakeHero";
+import { StakeSlices } from "@/components/stake/StakeSlices";
 import { StakeStats } from "@/components/stake/StakeStats";
 import { StakeLock } from "@/components/stake/StakeLock";
 import { getDevnetProof, getMintSupply, getStakeView, type DevnetProof } from "@/lib/chain";
 import { serverEnv } from "@/lib/env";
 import { stakeHero } from "@/lib/stakePage";
+import { slicesModel } from "@/lib/stakeSlices";
 import { stakeStats } from "@/lib/stakeStats";
 import { stakeChartCard } from "@/lib/stakeChart";
 import { getAgentStatus } from "@/lib/status";
@@ -37,6 +39,7 @@ export default async function StakePage() {
         <div className="flex flex-col gap-12">
           <StakeLock card={card} />
           <StakeStats model={stats} />
+          <StakeSlices model={slicesModel({ status, stake })} />
         </div>
       </WhiteSheet>
     </main>
