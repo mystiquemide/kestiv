@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { AgentPanelModel, LockPanelModel, StakePanelModel } from "@/lib/hero";
@@ -19,11 +20,11 @@ export function HeroBand({ stake, agent, lock }: HeroModels) {
     <section className="bg-band pt-[168px] pb-[156px]">
       <div className="container-k">
         <div className="mx-auto flex max-w-[880px] flex-col items-center text-center">
-          <h1 className="text-h1">Own what you launched.</h1>
-          <p className="mt-6 max-w-[640px] text-sub">
+          <h1 className="rise text-h1">Own what you launched.</h1>
+          <p className="rise mt-6 max-w-[640px] text-sub" style={{ "--d": "0.1s" } as CSSProperties}>
             Kestiv turns a token&apos;s creator fees into a founder stake, and locks every token it buys where nobody can cancel it.
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6">
+          <div className="rise mt-10 flex flex-wrap items-center justify-center gap-6" style={{ "--d": "0.2s" } as CSSProperties}>
             <CtaPill className="inline-flex" />
             {routeLive("/run") && (
               <Link href="/run" className="inline-flex items-center gap-2 rounded-image text-[16px] font-medium text-ink hover:underline">
@@ -34,7 +35,7 @@ export function HeroBand({ stake, agent, lock }: HeroModels) {
           </div>
         </div>
 
-        <div className="mx-auto mt-20 w-full max-w-[1080px]">
+        <div className="rise mx-auto mt-20 w-full max-w-[1080px]" style={{ "--d": "0.35s" } as CSSProperties}>
           <div className="grid gap-4 md:grid-cols-2 lg:flex lg:justify-between lg:gap-6">
             <StakePanel model={stake} className="lg:w-[420px] lg:pb-[60px]" />
             <AgentPanel model={agent} className="lg:mt-12 lg:w-[600px] lg:pb-[60px]" />

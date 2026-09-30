@@ -130,3 +130,73 @@ h3 {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+[id] {
+  scroll-margin-top: 96px;
+}
+
+/* Motion: short, calm, and off when the visitor asks for less. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .rise {
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--d, 0s);
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--d, 0s);
+  }
+
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+
+  main article {
+    transition: transform 0.25s ease;
+  }
+
+  @media (hover: hover) {
+    main article:hover {
+      transform: translateY(-4px);
+    }
+  }
+
+  details[open] > p {
+    animation: fade 0.3s ease both;
+  }
+
+  a,
+  summary {
+    transition-property: color, background-color, opacity, text-decoration-color;
+    transition-duration: 0.2s;
+  }
+}

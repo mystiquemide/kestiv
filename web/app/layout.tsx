@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Footer } from "@/components/Footer";
+import { MotionInit } from "@/components/MotionInit";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Nav />
         <div className="flex-1">{children}</div>
         <Footer />
+        <MotionInit />
       </body>
     </html>
   );
