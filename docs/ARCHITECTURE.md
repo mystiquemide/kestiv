@@ -8,7 +8,7 @@ flowchart LR
   W -->|founder share| F[Founder wallet]
   W -->|SOL slice| J[Jupiter swap]
   J -->|$KESTIV| W
-  W -->|create once, then topup| S[Streamflow vesting contract<br/>recipient = founder<br/>no cancel, no transfer]
+  W -->|one lock per buy| S[Jupiter locks<br/>recipient = founder<br/>cancel and change-recipient: nobody]
   S -.->|unlocks after cliff| F
   CP[ClawPump /price] --> A[Kestiv agent loop]
   H[Helius RPC + parsed swaps] --> A
@@ -18,7 +18,7 @@ flowchart LR
   WEB -->|reads| H
 ```
 
-One process, one wallet, one vesting contract. No custom program.
+One process, one wallet, one Jupiter lock per buy. No custom program.
 
 ## Components
 
@@ -27,7 +27,7 @@ One process, one wallet, one vesting contract. No custom program.
 | `agent/` | TypeScript, Node 22 | CLI (`init`, `status`, `run-once`, `loop`), loop state machine, limits, signing |
 | `agent/chain/` | `@solana/web3.js`, Helius | Balances, holders, parsed swaps, tx send and confirm |
 | `agent/swap/` | Jupiter Swap API | Quote and swap tx for SOL to $KESTIV. Fallback: `@pump-fun/pump-sdk` |
-| `agent/lock/` | `@streamflow/stream` 13.x | Create the vesting contract, topup, read contract |
+| `agent/lock/` | Jupiter Lock program (`create_vesting_escrow_v2`), built natively | Create one lock per buy, read and verify locks |
 | `agent/usepod/` | fetch + x402 SOL rail | Organic-trading verdict |
 | `agent/clawpump/` | ClawPump partner API | `/price` market data. Launch helper (used once) |
 | `agent/store/` | SQLite (`better-sqlite3`) | Inflows, slices, loop runs, idempotency |
@@ -40,24 +40,24 @@ One process, one wallet, one vesting contract. No custom program.
 |---|---|---|---|
 | ADR-1 | Kestiv's keypair is generated before $KESTIV launches and passed as ClawPump `payoutWallet` | Fees land directly in the agent. ClawPump fixes the payout wallet once the token exists | Impossible to change after launch. Lose this key and future fees are lost |
 | ADR-2 | Buys go through Jupiter from Kestiv's own wallet | ClawPump `/swap/execute` rejects wallets that aren't a ClawPump agent wallet (403) | Rewriting the buy path |
-| ADR-3 | One Streamflow vesting contract, created with the first slice, topped up afterwards | Creation costs about 0.175 SOL plus 0.19%. Per-slice contracts would eat small slices | Multiple contracts complicate the stake math and the cap |
-| ADR-4 | Contract flags: `canTopup` true. `cancelableBySender`, `cancelableByRecipient`, `transferableBySender`, `transferableByRecipient`, `canUpdateRate`, `automaticWithdrawal` false | `canUpdateRate` false means cancel and transfer can never be switched on later | The whole trust claim |
-| ADR-5 | Vesting: start = cliff = creation + 90 days, daily period, amountPerPeriod = ceil(first slice / 365), cliffAmount 0. Topups keep the daily rate and push the end date out, so every slice unlocks at the same pace and the schedule grows with the stake | Long enough that "delayed dump" doesn't apply during judging or soon after | Terms visible onchain. Changing needs a new contract |
+| ADR-3 | One Jupiter lock per buy | Jupiter Lock has no top-up and no protocol fee, and a lock costs about 0.004 to 0.005 SOL. Stake and cap are the sum over all locks | More accounts to read, and a fixed cost per slice |
+| ADR-4 | Lock modes: cancel mode 0 and update-recipient mode 0 (nobody), no lump at the cliff, 90 day cliff, 365 daily periods | The modes are fixed when a lock is created, so nobody can switch them on later. Checked on devnet: a cancel attempt fails with error 6005 | The whole trust claim |
+| ADR-5 | Vesting: start = cliff = creation + 90 days, daily period, amountPerPeriod = floor(slice / 365), cliffAmount 0. Every lock has its own schedule, so each slice unlocks at the same pace. The first unlock comes one period after the cliff. A remainder under 365 raw units stays in the wallet | Long enough that "delayed dump" doesn't apply during judging or soon after | Terms visible onchain. Terms cannot be changed after creation |
 | ADR-6 | Lock-first: every loop locks any unlocked $KESTIV before anything else | Closes the gap between buy and lock | Tokens could sit unlocked |
 | ADR-7 | Slice IDs are written to SQLite before sending and marked done only after confirmation | No double buys on retry | Duplicate spending |
 | ADR-8 | Hard rules decide size. UsePod can only veto | Money never depends on a model | UsePod becomes decoration, or a model controls funds |
 | ADR-9 | Signing guard: before signing, decode the message and assert top-level program IDs are in an allowlist | A compromised API response can't make Kestiv sign something else | Wider attack surface |
-| ADR-10 | The stake page reads Streamflow and mint supply from chain. Agent status is labelled agent-reported | UI never disagrees with the chain | Trust loss on one bad frame |
+| ADR-10 | The stake page reads the locks and mint supply from chain. It takes lock addresses from the agent's report, then checks each one on chain (creator, recipient, mint). Agent status is labelled agent-reported | UI never disagrees with the chain | Trust loss on one bad frame |
 | ADR-11 | No sell code path exists | Nothing to exploit, nothing to explain | None |
 
-Signing allowlist (top-level instructions): System, Compute Budget, SPL Token, Associated Token Account, Jupiter v6 aggregator, pump.fun program, PumpSwap AMM (fallback path), Streamflow. Exact program IDs are pinned in `agent/chain/allowlist.ts` and verified against a live transaction on day 1.
+Signing allowlist (top-level instructions): System, Compute Budget, SPL Token, Associated Token Account, Jupiter v6 aggregator, pump.fun program, PumpSwap AMM (fallback path), Jupiter Lock (create only). Exact program IDs are pinned in `agent/chain/allowlist.ts` and verified against a live transaction on day 1.
 
 ## Loop state machine
 
 ```
 IDLE
  └─ run-once
-     1. LOCK_PENDING   any unlocked $KESTIV in wallet? -> create contract (first time) or topup -> confirm
+     1. LOCK_PENDING   any unlocked $KESTIV in wallet? -> create a new lock -> confirm
      2. INTAKE         new SOL inflows since last run? -> tag fee|seed -> forward founder share -> confirm
      3. GATES          cap reached? cooldown? budget >= min slice? -> else WAIT(reason)
      4. SIGNALS        ClawPump /price (volume24h, liquidity, marketCap), Helius holders, 6h VWAP
@@ -66,7 +66,7 @@ IDLE
      6. QUOTE          Jupiter quote -> impact > 1.5% or spot > 1.3x VWAP -> SKIP(reason)
      7. VETO           UsePod verdict on last 200 swaps -> skip -> SKIP(reason). Error -> SKIP(usepod_unavailable)
      8. BUY            slice row inserted (pending) -> sign (allowlist) -> send -> confirm -> row done
-     9. LOCK           topup or create -> confirm -> row locked
+     9. LOCK           create a new lock -> confirm -> row locked
  └─ write status.json, sleep random 30-90 min (loop mode)
 ```
 
@@ -79,8 +79,9 @@ inflows(sig TEXT PRIMARY KEY, lamports INTEGER, source TEXT CHECK(source IN ('fe
 forwards(sig TEXT PRIMARY KEY, inflow_sig TEXT, lamports INTEGER, ts INTEGER)
 slices(id TEXT PRIMARY KEY, status TEXT CHECK(status IN ('pending','bought','locked','failed')),
        sol_in INTEGER, tokens_out TEXT, buy_sig TEXT, lock_sig TEXT, reason TEXT, created_ts INTEGER)
+locks(escrow TEXT PRIMARY KEY, sig TEXT, amount TEXT, ts INTEGER)  -- one row per Jupiter lock
 runs(id INTEGER PRIMARY KEY, state TEXT, reason TEXT, ts INTEGER)
-config(key TEXT PRIMARY KEY, value TEXT)  -- mint, founder, contract_id, terms; write-once keys enforced in code
+config(key TEXT PRIMARY KEY, value TEXT)  -- mint, founder, vesting_terms; write-once keys enforced in code
 ```
 
 Inflow tagging: transfers from ClawPump's fee forwarder address are `fee`. Everything else is `seed`. The forwarder address is recorded from the first observed payout and pinned in config.
@@ -92,7 +93,7 @@ Inflow tagging: transfers from ClawPump's fee forwarder address are `fee`. Every
 | ClawPump | `GET https://clawpump.tech/api/v1/price?mint=` | Use the apex domain. `agents.clawpump.tech` redirects and drops the auth header |
 | ClawPump | `POST /api/v1/launch` with `payoutWallet` | Once. Check the response `payoutWallet` equals Kestiv's address |
 | Jupiter | quote, then swap | Verify access and curve routing on day 1 (PRD A2, A3) |
-| Streamflow | `SolanaStreamClient.create` then `topup`, `getOne` | SDK 13.x. Fee confirmed on the first creation tx |
+| Jupiter Lock | `create_vesting_escrow_v2`, then reading escrow accounts | No SDK in the agent. The instruction is built natively and matches the reference client byte for byte (`agent/test/jupiter-lock.test.ts`) |
 | UsePod | `POST https://api.usepod.ai/proxy/x402/v1/chat/completions` | 402 quote, pay SOL rail, retry identical body with `PAYMENT-SIGNATURE`. Body must be byte-identical |
 | Helius | RPC, token accounts by mint, parsed tx history | Key in env, server-side only |
 

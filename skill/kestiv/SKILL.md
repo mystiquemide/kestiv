@@ -1,9 +1,9 @@
 ---
 name: kestiv
-description: "Turns a Solana token's creator fees into a founder stake locked in an uncancellable Streamflow vesting contract. Runs a gated buy loop with a dry-run mode, a UsePod veto and hard spend limits. Never sells."
+description: "Turns a Solana token's creator fees into a founder stake locked in uncancellable Jupiter locks. Runs a gated buy loop with a dry-run mode, a UsePod veto and hard spend limits. Never sells."
 version: 0.1.0
 author: Kestiv (built on Hermes)
-tags: [solana, pump-fun, creator-fees, vesting, streamflow, founder-stake, agent, clawpump]
+tags: [solana, pump-fun, creator-fees, vesting, jupiter-lock, founder-stake, agent, clawpump]
 platforms: [linux, macos]
 prerequisites:
   commands: [node, npm]
@@ -13,7 +13,7 @@ required_environment_variables:
     help: "The public key of the wallet that receives creator fees and holds the buy budget"
   - name: FOUNDER_WALLET
     prompt: "Founder wallet address (public key)"
-    help: "Receives the founder share of fees and is the recipient of the vesting contract"
+    help: "Receives the founder share of fees and is the creator of the locks"
   - name: KESTIV_MINT
     prompt: "Token mint address"
     help: "The Solana mint of the token whose founder stake Kestiv builds"
@@ -46,9 +46,9 @@ metadata:
 
 Kestiv is a CLI agent. Creator fees for one token land in the Kestiv wallet.
 It forwards the founder's share, and uses the rest to buy that token and lock
-it in a Streamflow vesting contract. The contract is created once with
-`canTopup` on and cancel, transfer and rate changes permanently off, so the
-founder cannot cancel or redirect the stake and Kestiv's key cannot move it.
+it in a new Jupiter lock for the founder. Each lock is created with cancel and
+change-recipient set to nobody, which cannot be changed later, so nobody can
+cancel or redirect the stake and Kestiv's key cannot move it.
 
 There is **no sell code path**. Kestiv only buys and locks.
 
@@ -92,7 +92,7 @@ scripts/kestiv.sh config add-fee-source <PUBKEY>
 ```
 
 - `status`: config presence per variable (set or missing, never values), cluster
-  and RPC kind, mint, contract id, slice counts, cooldown, last run and budget.
+  and RPC kind, mint, lock count, slice counts, cooldown, last run and budget.
   Safe at any time.
 - `run-once --dry-run`: evaluates every gate with its value and threshold, takes
   a real Jupiter quote and one free unpaid UsePod call, and prints what it
@@ -132,14 +132,14 @@ The first line is `<STATE> <reason>`.
 | `BOUGHT` | A slice was bought, then locked in the same run. |
 | `CAP_REACHED` | The stake hit the cap. Unspent budget goes to the founder. |
 | `WOULD_BUY` | Dry-run only: every evaluated gate passed. |
-| `ERROR` | A step failed, for example a contract with changed terms. Read the error line, do not retry blindly. |
+| `ERROR` | A step failed, for example a lock with changed terms. Read the error line, do not retry blindly. |
 
 Common reasons: `cooldown`, `volume_below_min`, `volume_unavailable`,
 `holders_below_min`, `holders_unavailable` (needs Helius), `not_enough_trades`,
 `budget_below_min_slice`, `cap_headroom_below_min_slice`,
 `price_impact_too_high`, `price_above_vwap`, `usepod_skip`,
 `usepod_quote_too_high`, `usepod_unavailable`, `pending_confirmation`,
-`insufficient_sol_for_contract`, `lock_terms_violation`.
+`insufficient_sol_for_lock`, `lock_terms_violation`.
 
 Each `gate PASS|FAIL` line shows the measured value and the threshold. The
 volume gate names its source: `clawpump`, `swaps_24h`, or `swaps_lower_bound`
