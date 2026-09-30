@@ -1,8 +1,11 @@
-import Image from "next/image";
 import { ArrowUpRight, CircleAlert } from "lucide-react";
-import { PHOTOS } from "@/lib/photos";
+import type { AgentPanelModel, LockPanelModel } from "@/lib/hero";
+import { signerLines } from "@/lib/signerScreen";
 import type { ProtectionModel } from "@/lib/protection";
 import { SectionHeading } from "../sheet/SectionHeading";
+import { AgentPanel } from "../hero/AgentPanel";
+import { LockPanel } from "../hero/LockPanel";
+import { TerminalPanel } from "../run/TerminalPanel";
 import { ProtectionTabs, type TabSpec } from "./ProtectionTabs";
 
 function ExtLink({ href, children }: { href: string; children: string }) {
@@ -18,7 +21,7 @@ function Heading({ children }: { children: string }) {
   return <h3 className="text-h3">{children}</h3>;
 }
 
-export function Protection({ model }: { model: ProtectionModel }) {
+export function Protection({ model, lock, agent }: { model: ProtectionModel; lock: LockPanelModel; agent: AgentPanelModel }) {
   const { cancel, sells, checks } = model;
 
   const tabs: TabSpec[] = [
@@ -34,24 +37,11 @@ export function Protection({ model }: { model: ProtectionModel }) {
               <CircleAlert size={24} strokeWidth={1.75} className="shrink-0 text-refusal" aria-hidden="true" />
               <p>{cancel.lock.error}</p>
             </div>
-          ) : (
-            <div className="mt-8">
-              <p className="mb-3 text-caption text-helper">{cancel.lock.label}</p>
-              <dl className="grid grid-cols-2 border-t border-line">
-                {cancel.lock.cells.map((c, i) => (
-                  <div key={c.label} className={`border-b border-line py-3 ${i % 2 === 0 ? "pr-4" : "border-l pl-4"}`}>
-                    <dt className="text-[14px] text-helper">{c.label}</dt>
-                    <dd className={`text-[18px] ${c.tone === "refusal" ? "text-refusal" : "text-ink"}`}>{c.value}</dd>
-                  </div>
-                ))}
-              </dl>
-              {cancel.lock.streamflowHref ? (
-                <p className="mt-6">
-                  <ExtLink href={cancel.lock.streamflowHref}>Read them yourself on Streamflow</ExtLink>
-                </p>
-              ) : null}
-            </div>
-          )}
+          ) : cancel.lock.streamflowHref ? (
+            <p className="mt-8">
+              <ExtLink href={cancel.lock.streamflowHref}>Read them yourself on Streamflow</ExtLink>
+            </p>
+          ) : null}
         </div>
       ),
     },
@@ -99,23 +89,17 @@ export function Protection({ model }: { model: ProtectionModel }) {
     },
   ];
 
-  const photo = (
-    <div className="relative aspect-[4/3] overflow-hidden rounded-image lg:aspect-auto lg:h-full lg:min-h-[480px]">
-      <Image
-        src={PHOTOS.stairsWarm.file}
-        alt={PHOTOS.stairsWarm.alt}
-        fill
-        sizes="(min-width:1024px) 540px, 100vw"
-        className="object-cover"
-      />
-    </div>
-  );
+  const visuals = {
+    cancel: <LockPanel model={lock} />,
+    sells: <TerminalPanel lines={signerLines()} title="kestiv signer" compact />,
+    checks: <AgentPanel model={agent} />,
+  };
 
   return (
     <section id="what-protects-the-stake">
       <SectionHeading eyebrow="What protects the stake" title="Rules the agent can't break" />
       <div className="mt-14">
-        <ProtectionTabs tabs={tabs} photo={photo} />
+        <ProtectionTabs tabs={tabs} visuals={visuals} />
       </div>
     </section>
   );

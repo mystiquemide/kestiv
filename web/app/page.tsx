@@ -1,4 +1,4 @@
-import { PhotoBand } from "@/components/band/PhotoBand";
+import { DecisionsBand } from "@/components/band/DecisionsBand";
 import { Faq } from "@/components/faq/Faq";
 import { ClosingCta } from "@/components/faq/ClosingCta";
 import { Verify } from "@/components/verify/Verify";
@@ -10,6 +10,7 @@ import { WhiteSheet } from "@/components/sheet/WhiteSheet";
 import { WhoItsFor } from "@/components/who/WhoItsFor";
 import { getDevnetProof, getMintSupply, getStakeView, type DevnetProof } from "@/lib/chain";
 import { serverEnv } from "@/lib/env";
+import { decisionsModel } from "@/lib/decisions";
 import { agentPanel, lockPanel, stakePanel } from "@/lib/hero";
 import { protectionModel } from "@/lib/protection";
 import { buyCard, checksCard, feesCard, lockCard } from "@/lib/howItWorks";
@@ -49,9 +50,13 @@ export default async function Home() {
           lock={lockCard(stake, proof, liveStake, devnetDecimals)}
         />
         <WhoItsFor />
-        <Protection model={protectionModel({ status, stake, proof, repoUrl: env.repoUrl })} />
+        <Protection
+          model={protectionModel({ status, stake, proof, repoUrl: env.repoUrl })}
+          lock={lockPanel(stake, proof)}
+          agent={agentPanel(status, now)}
+        />
         <BuiltOn />
-        <PhotoBand />
+        <DecisionsBand model={decisionsModel(status)} />
         <Verify model={verifyModel({ stake, status, proof, env: { cluster: env.cluster, wallet: env.wallet }, now })} />
         <Faq />
         <ClosingCta />

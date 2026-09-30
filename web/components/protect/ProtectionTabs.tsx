@@ -9,7 +9,7 @@ export interface TabSpec {
   content: ReactNode;
 }
 
-export function ProtectionTabs({ tabs, photo }: { tabs: TabSpec[]; photo: ReactNode }) {
+export function ProtectionTabs({ tabs, visuals }: { tabs: TabSpec[]; visuals: Record<string, ReactNode> }) {
   const [active, setActive] = useState(0);
   const base = useId();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -52,7 +52,13 @@ export function ProtectionTabs({ tabs, photo }: { tabs: TabSpec[]; photo: ReactN
       </div>
 
       <div className="mt-8 grid overflow-hidden rounded-card bg-band lg:grid-cols-2">
-        <div className="p-4">{photo}</div>
+        <div className="p-4 lg:p-6">
+          {tabs.map((t, i) => (
+            <div key={t.id} hidden={i !== active} aria-hidden={i !== active}>
+              {visuals[t.id]}
+            </div>
+          ))}
+        </div>
         <div className="p-6 md:p-12">
           {tabs.map((t, i) => (
             <div

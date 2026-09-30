@@ -1,6 +1,4 @@
-import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
-import { PHOTOS } from "@/lib/photos";
 import { NextSteps } from "./NextSteps";
 import { WhiteSheet } from "./sheet/WhiteSheet";
 
@@ -12,9 +10,8 @@ export const WHERE_TO = [
   { label: "Run it", href: "/run", text: "Set up your own agent in six steps." },
 ];
 
-/** Shared by the 404 and the error page: one message, ways back, and a quiet photo. */
+/** Shared by the 404 and the error page: one message and ways back. */
 export function ErrorPage({ eyebrow, title, text, actions }: { eyebrow: string; title: string; text: string; actions?: ReactNode }) {
-  const photo = PHOTOS.stairsWhite;
   return (
     <main>
       <section className="bg-band pt-[168px] pb-[120px]">
@@ -37,9 +34,6 @@ export function ErrorPage({ eyebrow, title, text, actions }: { eyebrow: string; 
       </section>
       <WhiteSheet>
         <NextSteps title="Where people usually go" steps={WHERE_TO} columns={3} />
-        <div className="overflow-hidden rounded-card">
-          <Image src={photo.file} alt={photo.alt} width={photo.width} height={photo.height} sizes="(min-width: 1224px) 1176px, 100vw" className="h-[220px] w-full object-cover md:h-[360px]" />
-        </div>
       </WhiteSheet>
     </main>
   );

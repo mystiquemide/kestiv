@@ -9,7 +9,7 @@ import type { AgentStatus } from "../lib/status";
 import { verifyModel } from "../lib/verify";
 import { ClosingCta } from "../components/faq/ClosingCta";
 import { Faq } from "../components/faq/Faq";
-import { PhotoBand } from "../components/band/PhotoBand";
+import { DecisionsBand } from "../components/band/DecisionsBand";
 import { Verify } from "../components/verify/Verify";
 
 const response = StatusResponseSchema.parse(JSON.parse(readFileSync(new URL("./fixtures/status-response-quote.json", import.meta.url), "utf8")));
@@ -85,15 +85,15 @@ describe("faq", () => {
 describe("buttons to pages", () => {
   it("every page a section 5 button points at is live, so the buttons render", () => {
     for (const r of ["/decisions", "/run", "/stake"]) expect(routeLive(r), r).toBe(true);
-    expect(renderToStaticMarkup(<PhotoBand />)).toContain('href="/decisions"');
+    expect(renderToStaticMarkup(<DecisionsBand model={{ kind: "empty", message: "x" }} />)).toContain('href="/decisions"');
     const cta = renderToStaticMarkup(<ClosingCta />);
     expect(cta).toContain("Start owning what you launched.");
     expect(cta).toContain('href="/run"');
     expect(cta).toContain('href="/stake"');
   });
 
-  it("photo band has its headline and no em dash", () => {
-    const html = renderToStaticMarkup(<PhotoBand />);
+  it("decisions band has its headline and no em dash", () => {
+    const html = renderToStaticMarkup(<DecisionsBand model={{ kind: "empty", message: "x" }} />);
     expect(html).toContain("Every buy adds a step. No step can be taken away.");
     expect(html).not.toContain("\u2014");
   });

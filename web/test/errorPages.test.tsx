@@ -7,13 +7,13 @@ import ErrorBoundary from "../app/error";
 import GlobalError from "../app/global-error";
 
 describe("404 and error pages", () => {
-  it("the 404 has one h1, a way home, three real destinations and a photo with alt text", () => {
+  it("the 404 has one h1, a way home, three real destinations and no stock photo", () => {
     const html = renderToStaticMarkup(<NotFound />);
     expect(html.match(/<h1/g)).toHaveLength(1);
     expect(html).toContain("This step isn&#x27;t on the staircase.");
     expect(html).toContain('href="/"');
     for (const w of WHERE_TO) expect(html).toContain(`href="${w.href}"`);
-    expect(html).toMatch(/<img[^>]*alt="[^"]{10,}"/);
+    expect(html).not.toContain("<img");
     expect(html).not.toContain("—");
   });
 

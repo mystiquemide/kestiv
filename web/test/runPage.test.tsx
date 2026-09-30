@@ -111,7 +111,7 @@ describe("run hero terminal", () => {
     expect(lines.some((l) => /^… \d+ more lines$/.test(l))).toBe(true);
     expect(lines.at(-1)).toBe("$ npm run kestiv -- loop");
     const html = renderToStaticMarkup(<RunHero repoUrl={undefined} terminal={lines} />);
-    expect(html).toContain('aria-label="Kestiv commands in a terminal"');
+    expect(html).toContain('aria-label="kestiv in a terminal"');
     expect(html).toContain("DRY-RUN");
     expect(html).not.toContain("<img");
     expect(html).not.toContain("—");

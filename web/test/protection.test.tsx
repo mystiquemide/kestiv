@@ -127,7 +127,7 @@ describe("tab keyboard behaviour", () => {
 describe("tabs markup", () => {
   const html = renderToStaticMarkup(
     <ProtectionTabs
-      photo={<span>photo</span>}
+      visuals={{ a: <span>one visual</span>, b: <span>two visual</span>, c: <span>three visual</span> }}
       tabs={[
         { id: "a", label: "First", content: <p>one</p> },
         { id: "b", label: "Second", content: <p>two</p> },
