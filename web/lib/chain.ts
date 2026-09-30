@@ -1,57 +1,28 @@
 import "server-only";
-import { Connection, PublicKey, type ParsedTransactionWithMeta } from "@solana/web3.js";
-import {
-  PROGRAM_ID,
-  STREAM_STRUCT_OFFSET_MINT,
-  STREAM_STRUCT_OFFSET_RECIPIENT,
-  STREAM_STRUCT_OFFSET_SENDER,
-  decodeStream,
-} from "@streamflow/stream";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { redact, rpcFor, serverEnv, type Cluster, type RpcKind } from "./env";
+import {
+  ESCROW_ACCOUNT_SIZE,
+  LOCKER_PROGRAM_ID,
+  OFFSET_CREATOR,
+  OFFSET_MINT,
+  OFFSET_RECIPIENT,
+  guaranteesOf,
+  isFounderLock,
+  lockTotals,
+  parseLockAccount,
+  type LockData,
+  type LockGuarantees,
+} from "./lock";
 import { getAgentStatus } from "./status";
-import { DEFAULT_CAP_BPS, isCapReached, percentString, vestingNow, type VestingNow } from "./vesting";
-
-// Offsets of two flags the SDK's decoded stream omits. Same constants as agent/src/lock/read.ts
-// (derived from the stream account layout in @streamflow/stream 13.4.0).
-const OFFSET_PAUSABLE = 539;
-const OFFSET_CAN_UPDATE_RATE = 540;
+import { DEFAULT_CAP_BPS, isCapReached, percentString } from "./vesting";
 
 const CACHE_MS = 30_000;
 
-export interface StreamFlags {
-  canTopup: boolean;
-  cancelableBySender: boolean;
-  cancelableByRecipient: boolean;
-  transferableBySender: boolean;
-  transferableByRecipient: boolean;
-  automaticWithdrawal: boolean;
-  canUpdateRate: boolean;
-  pausable: boolean;
-}
-
-export interface StreamData {
+/** One step of the staircase: a lock, when it started and how much it holds. */
+export interface LockStep {
   id: string;
-  sender: string;
-  recipient: string;
-  mint: string;
-  escrowTokens: string;
-  depositedAmount: string;
-  withdrawnAmount: string;
-  start: number;
-  cliff: number;
-  end: number;
-  period: number;
-  amountPerPeriod: string;
-  cliffAmount: string;
-  createdAt: number;
-  closed: boolean;
-  flags: StreamFlags;
-}
-
-export interface StreamStep {
-  sig: string;
   ts: number;
-  kind: "create" | "topup";
   amount: string;
 }
 
@@ -59,8 +30,6 @@ export interface MintSupply {
   supply: string;
   decimals: number;
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const cache = new Map<string, { at: number; value: Promise<unknown> }>();
 
@@ -93,40 +62,6 @@ export function connectionFor(cluster: Cluster): { connection: Connection; rpcKi
   return { connection, rpcKind: rpc.kind };
 }
 
-const sdkCluster = (cluster: Cluster) => (cluster === "devnet" ? "devnet" : "mainnet");
-const programId = (cluster: Cluster) => new PublicKey(PROGRAM_ID[sdkCluster(cluster)]);
-
-export function parseStreamAccount(id: string, data: Buffer): StreamData {
-  const s = decodeStream(data);
-  return {
-    id,
-    sender: s.sender.toBase58(),
-    recipient: s.recipient.toBase58(),
-    mint: s.mint.toBase58(),
-    escrowTokens: s.escrowTokens.toBase58(),
-    depositedAmount: s.depositedAmount.toString(),
-    withdrawnAmount: s.withdrawnAmount.toString(),
-    start: s.start.toNumber(),
-    cliff: s.cliff.toNumber(),
-    end: s.end.toNumber(),
-    period: s.period.toNumber(),
-    amountPerPeriod: s.amountPerPeriod.toString(),
-    cliffAmount: s.cliffAmount.toString(),
-    createdAt: s.createdAt.toNumber(),
-    closed: s.closed,
-    flags: {
-      canTopup: s.canTopup,
-      cancelableBySender: s.cancelableBySender,
-      cancelableByRecipient: s.cancelableByRecipient,
-      transferableBySender: s.transferableBySender,
-      transferableByRecipient: s.transferableByRecipient,
-      automaticWithdrawal: s.automaticWithdrawal,
-      canUpdateRate: data[OFFSET_CAN_UPDATE_RATE] !== 0,
-      pausable: data[OFFSET_PAUSABLE] !== 0,
-    },
-  };
-}
-
 export async function getMintSupply(mint: string, cluster: Cluster = serverEnv().cluster): Promise<MintSupply> {
   return cached(`supply:${cluster}:${mint}`, async () => {
     const { connection } = connectionFor(cluster);
@@ -135,115 +70,70 @@ export async function getMintSupply(mint: string, cluster: Cluster = serverEnv()
   });
 }
 
-export async function readStream(id: string, cluster: Cluster = serverEnv().cluster): Promise<StreamData> {
-  return cached(`stream:${cluster}:${id}`, async () => {
+export async function readLocks(ids: string[], cluster: Cluster = serverEnv().cluster): Promise<LockData[]> {
+  if (ids.length === 0) return [];
+  return cached(`locks:${cluster}:${ids.join(",")}`, async () => {
     const { connection } = connectionFor(cluster);
-    const info = await connection.getAccountInfo(new PublicKey(id), "confirmed");
-    if (!info) throw new Error(`stream ${id} not found`);
-    if (!info.owner.equals(programId(cluster))) throw new Error(`stream ${id} is not a Streamflow contract on ${cluster}`);
-    return parseStreamAccount(id, info.data);
-  });
-}
-
-export interface FoundStream {
-  stream: StreamData;
-  multiple: boolean;
-}
-
-export async function findFounderStream(p: {
-  mint: string;
-  sender: string;
-  recipient: string;
-  cluster?: Cluster;
-}): Promise<FoundStream | null> {
-  const cluster = p.cluster ?? serverEnv().cluster;
-  return cached(`find:${cluster}:${p.mint}:${p.sender}:${p.recipient}`, async () => {
-    const { connection } = connectionFor(cluster);
-    const accounts = await connection.getProgramAccounts(programId(cluster), {
-      commitment: "confirmed",
-      filters: [
-        { memcmp: { offset: STREAM_STRUCT_OFFSET_SENDER, bytes: p.sender } },
-        { memcmp: { offset: STREAM_STRUCT_OFFSET_RECIPIENT, bytes: p.recipient } },
-        { memcmp: { offset: STREAM_STRUCT_OFFSET_MINT, bytes: p.mint } },
-      ],
-    });
-    const streams = accounts.map((a) => parseStreamAccount(a.pubkey.toBase58(), a.account.data));
-    const open = streams.filter((s) => !s.closed);
-    const pool = open.length > 0 ? open : streams;
-    if (pool.length === 0) return null;
-    const oldest = [...pool].sort((a, b) => a.createdAt - b.createdAt)[0]!;
-    return { stream: oldest, multiple: pool.length > 1 };
-  });
-}
-
-type TokenBalances = NonNullable<NonNullable<ParsedTransactionWithMeta["meta"]>["preTokenBalances"]>;
-
-const keyOf = (k: { pubkey: { toString(): string } }) => k.pubkey.toString();
-
-/** Net tokens moved into the escrow by one transaction, and whether it created the stream account. */
-export function escrowStep(
-  tx: ParsedTransactionWithMeta,
-  streamId: string,
-  escrowTokens: string,
-): { kind: "create" | "topup"; amount: bigint } | null {
-  const meta = tx.meta;
-  if (!meta || meta.err) return null;
-  const keys = tx.transaction.message.accountKeys.map(keyOf);
-  const streamIdx = keys.indexOf(streamId);
-  const escrowIdx = keys.indexOf(escrowTokens);
-  if (streamIdx < 0 || escrowIdx < 0) return null;
-  const at = (list: TokenBalances | null | undefined) =>
-    BigInt((list ?? []).find((b) => b.accountIndex === escrowIdx)?.uiTokenAmount.amount ?? "0");
-  const delta = at(meta.postTokenBalances) - at(meta.preTokenBalances);
-  if (delta <= 0n) return null;
-  return { kind: (meta.preBalances[streamIdx] ?? 0) === 0 ? "create" : "topup", amount: delta };
-}
-
-async function fetchParsed(connection: Connection, sigs: string[]): Promise<(ParsedTransactionWithMeta | null)[]> {
-  const opts = { maxSupportedTransactionVersion: 0, commitment: "confirmed" as const };
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      return await connection.getParsedTransactions(sigs, opts);
-    } catch {
-      await sleep(600 * attempt);
-    }
-  }
-  const out: (ParsedTransactionWithMeta | null)[] = [];
-  for (const s of sigs) {
-    out.push(await connection.getParsedTransaction(s, opts));
-    await sleep(120);
-  }
-  return out;
-}
-
-export async function streamSteps(id: string, cluster: Cluster = serverEnv().cluster): Promise<StreamStep[]> {
-  return cached(`steps:${cluster}:${id}`, async () => {
-    const { connection } = connectionFor(cluster);
-    const stream = await readStream(id, cluster);
-    const infos = await connection.getSignaturesForAddress(new PublicKey(id), { limit: 200 }, "confirmed");
-    const sigs = infos.filter((i) => !i.err).map((i) => i.signature);
-    const steps: StreamStep[] = [];
-    for (let i = 0; i < sigs.length; i += 10) {
-      const chunk = sigs.slice(i, i + 10);
-      const txs = await fetchParsed(connection, chunk);
-      txs.forEach((tx, j) => {
-        if (!tx) return;
-        const step = escrowStep(tx, id, stream.escrowTokens);
-        if (step) steps.push({ sig: chunk[j]!, ts: tx.blockTime ?? 0, kind: step.kind, amount: step.amount.toString() });
+    const out: LockData[] = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const infos = await connection.getMultipleAccountsInfo(chunk.map((id) => new PublicKey(id)), "confirmed");
+      infos.forEach((info, j) => {
+        if (!info || info.owner.toBase58() !== LOCKER_PROGRAM_ID) return;
+        try {
+          out.push(parseLockAccount(chunk[j]!, info.data));
+        } catch {
+          // not an escrow, so it cannot be one of the founder's locks
+        }
       });
     }
-    return steps.sort((a, b) => a.ts - b.ts);
+    return out;
   });
 }
 
-export { vestingNow };
-export type { VestingNow };
+/** Finds the founder's locks straight from the chain. Used when the agent's report is unavailable. */
+export async function findFounderLocks(p: { mint: string; creator: string; recipient: string; cluster?: Cluster }): Promise<LockData[]> {
+  const cluster = p.cluster ?? serverEnv().cluster;
+  return cached(`find:${cluster}:${p.mint}:${p.creator}:${p.recipient}`, async () => {
+    const { connection } = connectionFor(cluster);
+    const accounts = await connection.getProgramAccounts(new PublicKey(LOCKER_PROGRAM_ID), {
+      commitment: "confirmed",
+      filters: [
+        { dataSize: ESCROW_ACCOUNT_SIZE },
+        { memcmp: { offset: OFFSET_MINT, bytes: p.mint } },
+        { memcmp: { offset: OFFSET_CREATOR, bytes: p.creator } },
+        { memcmp: { offset: OFFSET_RECIPIENT, bytes: p.recipient } },
+      ],
+    });
+    const locks: LockData[] = [];
+    for (const a of accounts) {
+      try {
+        locks.push(parseLockAccount(a.pubkey.toBase58(), a.account.data));
+      } catch {
+        // skip anything that does not parse
+      }
+    }
+    return locks;
+  });
+}
+
+/** Addresses of the locks the agent says it created, or null when its report can't be reached. */
+async function listedLockIds(): Promise<string[] | null> {
+  try {
+    const s = await getAgentStatus();
+    if (!s.ok) return null;
+    const run = s.live ?? s.dry;
+    return run ? run.locks.map((l) => l.escrow) : [];
+  } catch {
+    return null;
+  }
+}
 
 export type StakeView =
   | { state: "not_launched" }
   | { state: "rpc_error"; rpcKind: RpcKind; error: string }
-  | ({ state: "no_contract" } & StakeBase)
-  | ({ state: "active" | "cap_reached" } & StakeBase & StakeContract);
+  | ({ state: "no_lock" } & StakeBase)
+  | ({ state: "active" | "cap_reached" } & StakeBase & StakeLocks);
 
 interface StakeBase {
   mint: string;
@@ -254,24 +144,22 @@ interface StakeBase {
   rpcKind: RpcKind;
 }
 
-interface StakeContract {
-  contractId: string;
+interface StakeLocks {
+  /** Every lock that checked out on chain as the founder's. */
+  locks: LockData[];
   recipient: string;
   sender: string;
-  multiple: boolean;
   stakePct: string;
   deposited: string;
   withdrawn: string;
   locked: string;
   vested: string;
   nextUnlock: number | null;
-  start: number;
+  /** First cliff and last unlock across all locks. */
   cliff: number;
   end: number;
-  period: number;
-  amountPerPeriod: string;
-  flags: StreamFlags;
-  steps: StreamStep[];
+  guarantees: LockGuarantees;
+  steps: LockStep[];
 }
 
 export interface StakeViewDeps {
@@ -279,8 +167,8 @@ export interface StakeViewDeps {
   capBps?: () => Promise<number | null>;
   nowSec?: () => number;
   supply?: (mint: string, cluster: Cluster) => Promise<MintSupply>;
-  find?: typeof findFounderStream;
-  steps?: typeof streamSteps;
+  /** The founder's locks. Defaults to the agent's list, read and checked on chain, or a chain search when the report is down. */
+  locks?: (p: { mint: string; creator: string; recipient: string; cluster: Cluster }) => Promise<LockData[]>;
 }
 
 async function agentCapBps(): Promise<number | null> {
@@ -292,6 +180,14 @@ async function agentCapBps(): Promise<number | null> {
   }
 }
 
+async function founderLocks(p: { mint: string; creator: string; recipient: string; cluster: Cluster }): Promise<LockData[]> {
+  const listed = await listedLockIds();
+  const found = listed ? await readLocks(listed, p.cluster) : await findFounderLocks(p);
+  return found.filter((l) => isFounderLock(l, p));
+}
+
+export const stepsOf = (locks: LockData[]): LockStep[] => locks.map((l) => ({ id: l.id, ts: l.start, amount: l.deposited })).sort((a, b) => a.ts - b.ts);
+
 export async function getStakeView(deps: StakeViewDeps = {}): Promise<StakeView> {
   const env = deps.env ?? serverEnv();
   if (!env.mint) return { state: "not_launched" };
@@ -299,50 +195,47 @@ export async function getStakeView(deps: StakeViewDeps = {}): Promise<StakeView>
   try {
     if (!env.wallet || !env.founder) throw new Error("KESTIV_WALLET and FOUNDER_WALLET must be set");
     const now = deps.nowSec ? deps.nowSec() : Math.floor(Date.now() / 1000);
-    const [supply, found, capBps] = await Promise.all([
+    const [supply, locks, capBps] = await Promise.all([
       (deps.supply ?? getMintSupply)(env.mint, env.cluster),
-      (deps.find ?? findFounderStream)({ mint: env.mint, sender: env.wallet, recipient: env.founder, cluster: env.cluster }),
+      (deps.locks ?? founderLocks)({ mint: env.mint, creator: env.wallet, recipient: env.founder, cluster: env.cluster }),
       (deps.capBps ?? agentCapBps)().then((v) => v ?? DEFAULT_CAP_BPS),
     ]);
     const base: StakeBase = { mint: env.mint, cluster: env.cluster, supply: supply.supply, decimals: supply.decimals, capBps, rpcKind };
-    if (!found) return { state: "no_contract", ...base };
+    if (locks.length === 0) return { state: "no_lock", ...base };
 
-    const { stream, multiple } = found;
-    const steps = await (deps.steps ?? streamSteps)(stream.id, env.cluster);
-    const v = vestingNow(stream, now);
-    const stake = BigInt(stream.depositedAmount) - BigInt(stream.withdrawnAmount);
+    const t = lockTotals(locks, now);
+    const stake = BigInt(t.deposited) - BigInt(t.claimed);
     const supplyBig = BigInt(supply.supply);
     return {
       state: isCapReached(stake, supplyBig, capBps) ? "cap_reached" : "active",
       ...base,
-      contractId: stream.id,
-      recipient: stream.recipient,
-      sender: stream.sender,
-      multiple,
+      locks,
+      recipient: env.founder,
+      sender: env.wallet,
       stakePct: percentString(stake, supplyBig),
-      deposited: stream.depositedAmount,
-      withdrawn: stream.withdrawnAmount,
-      locked: v.locked,
-      vested: v.vested,
-      nextUnlock: v.nextUnlock,
-      start: stream.start,
-      cliff: stream.cliff,
-      end: stream.end,
-      period: stream.period,
-      amountPerPeriod: stream.amountPerPeriod,
-      flags: stream.flags,
-      steps,
+      deposited: t.deposited,
+      withdrawn: t.claimed,
+      locked: t.locked,
+      vested: t.vested,
+      nextUnlock: t.nextUnlock,
+      cliff: t.cliff ?? 0,
+      end: t.end ?? 0,
+      guarantees: guaranteesOf(locks),
+      steps: stepsOf(locks),
     };
   } catch (e) {
     return { state: "rpc_error", rpcKind, error: redact(e instanceof Error ? e.message : "chain read failed") };
   }
 }
 
+/** Two real locks made with the agent's own code on devnet, and the failed cancel against the first (scripts/devnet-lock-check.ts). */
 export const DEVNET_PROOF = {
-  contractId: "G28zWX3sniaou4EBCuBBTc1tY4kewyfRU2eT7V65fQiV",
-  createSig: "4YYCodAuKZ66YKBYFpRMXya9JUWW2E8w9TCCc2GW14NjsiWy6xVjceHEjaszmnnA4BK39nVqB4izEkgtTUoi5nY5",
-  topupSig: "2D6TKcEkNGLb6uPwPE87Hy4PYekwjq5MyizzX1GMXSLfHsBKDtHuCBvwG5DF5u472LpAJqYQSaW8Mvcm4zwLsLXD",
-  cancelSig: "2crG6A3DAjrtAou2Uyfpw7cP5WZHVUFzRjbnqidL8bRHJxbti7EXmPLUG32aYiAembQVF5GqScqzs8enJF9eDef5",
+  mint: "7DvZoDAQvv1XdcFSauT1LKYjkE8o5DuZiWjbGpZYE37Y",
+  locks: [
+    { id: "5hdB38wWZw6THDLvJyYGCHu2oPEutYz7MfmVkifZvb3s", sig: "5TMFLNcoeiTm6Nm1ECaukmr5bvyg3wF5bLYQaNyafzLcxiz9UhpEMKXyAF3VPtj16VNAbWR6sUojYkey2jFrpyXv" },
+    { id: "FVqiRjqZppGRtXdRgXxEwX5wGwt5f6wkHjjZeJyRLwrW", sig: "3fc1TogWaCNDZcWr3MHZXSkdeX5bVhD82onVznoq45UTdxTH6jsxE4MQbeQozbGdusVr2uBceADkmhpQLzxqx5DG" },
+  ],
+  cancelSig: "4dBNaHwraKzc1pw2tgX2TLqoaC326qJ7SQG6eMMSq9dfGuufhKf8PKpJzb5z1nzAZVPCNCuppY4D9MmDbNidgmtC",
 } as const;
 
 export interface CancelAttempt {
@@ -355,9 +248,12 @@ export interface CancelAttempt {
 
 export interface DevnetProof {
   cluster: "devnet";
-  stream: StreamData;
-  steps: StreamStep[];
-  sigs: { create: string; topup: string; cancel: string };
+  mint: string;
+  locks: LockData[];
+  steps: LockStep[];
+  guarantees: LockGuarantees;
+  /** Creation transaction of each lock, in the same order. */
+  sigs: { locks: string[]; cancel: string };
   cancel: CancelAttempt | null;
 }
 
@@ -374,16 +270,18 @@ export async function getCancelAttempt(sig: string, cluster: Cluster): Promise<C
 }
 
 export async function getDevnetProof(): Promise<DevnetProof> {
-  const [stream, steps, cancel] = await Promise.all([
-    readStream(DEVNET_PROOF.contractId, "devnet"),
-    streamSteps(DEVNET_PROOF.contractId, "devnet"),
+  const [locks, cancel] = await Promise.all([
+    readLocks(DEVNET_PROOF.locks.map((l) => l.id), "devnet"),
     getCancelAttempt(DEVNET_PROOF.cancelSig, "devnet"),
   ]);
+  if (locks.length !== DEVNET_PROOF.locks.length) throw new Error("the devnet proof locks could not be read");
   return {
     cluster: "devnet",
-    stream,
-    steps,
-    sigs: { create: DEVNET_PROOF.createSig, topup: DEVNET_PROOF.topupSig, cancel: DEVNET_PROOF.cancelSig },
+    mint: DEVNET_PROOF.mint,
+    locks,
+    steps: stepsOf(locks),
+    guarantees: guaranteesOf(locks),
+    sigs: { locks: DEVNET_PROOF.locks.map((l) => l.sig), cancel: DEVNET_PROOF.cancelSig },
     cancel,
   };
 }

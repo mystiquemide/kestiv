@@ -2,11 +2,11 @@ import { readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { BUILT_ON, logoDisplayWidth } from "../lib/logos";
 
-const SLUGS = ["solana", "pump", "clawpump", "jupiter", "streamflow", "usepod", "helius"];
+const SLUGS = ["solana", "pump", "clawpump", "jupiter", "usepod", "helius"];
 const fileFor = (file: string) => new URL(`../public${file}`, import.meta.url);
 
 describe("built on logos", () => {
-  it("lists all seven projects in order", () => {
+  it("lists all six projects in order", () => {
     expect(BUILT_ON.map((l) => l.slug)).toEqual(SLUGS);
   });
 

@@ -1,6 +1,6 @@
 import type { DevnetProof, StakeView } from "./chain";
 import { shortAddress } from "./format";
-import { solscanAccount, solscanTx, streamflowUrl, type LinkCluster } from "./links";
+import { lockUrl, solscanAccount, solscanTx, type LinkCluster } from "./links";
 import type { AgentStatus } from "./status";
 import { timeAgo } from "./time";
 
@@ -38,15 +38,14 @@ export function verifyModel(args: {
   const live = stake.state === "active" || stake.state === "cap_reached" ? stake : null;
   const run = status.ok ? status.live : null;
 
-  if (live) {
+  const latestLive = live ? live.locks[live.locks.length - 1] : undefined;
+  const lockCluster: LinkCluster = live ? (live.cluster === "devnet" ? "devnet" : env.cluster) : "devnet";
+  const latestProof = proof?.locks[proof.locks.length - 1];
+  const target = latestLive ?? (live ? undefined : latestProof);
+  if (target) {
     cards.push({
-      id: "contract", title: "Vesting contract", value: live.contractId, display: shortAddress(live.contractId),
-      href: streamflowUrl(live.contractId, env.cluster), action: "Open Streamflow", devnet: false, ts: null, ago: null,
-    });
-  } else if (proof) {
-    cards.push({
-      id: "contract", title: "Vesting contract", value: proof.stream.id, display: shortAddress(proof.stream.id),
-      href: streamflowUrl(proof.stream.id, "devnet"), action: "Open Streamflow", devnet: true, ts: null, ago: null,
+      id: "contract", title: "Latest lock", value: target.id, display: shortAddress(target.id),
+      href: lockUrl(target.id, lockCluster), action: lockCluster === "devnet" ? "Open Solscan" : "Open Jupiter Lock", devnet: !live, ts: null, ago: null,
     });
   }
 
@@ -60,23 +59,23 @@ export function verifyModel(args: {
   const lockSig = live ? run?.latest.lockSig : null;
   if (live && lockSig) {
     const ts = run?.latest.lockTs ?? null;
-    const cluster: LinkCluster = run?.cluster === "devnet" ? "devnet" : env.cluster;
     cards.push({
-      id: "lock", title: "Latest lock", value: lockSig, display: shortAddress(lockSig),
-      href: solscanTx(lockSig, cluster), action: "Open Solscan", devnet: false, ts, ago: ts ? timeAgo(ts, now) : null,
+      id: "lock", title: "Latest buy", value: lockSig, display: shortAddress(lockSig),
+      href: solscanTx(lockSig, lockCluster), action: "Open Solscan", devnet: false, ts, ago: ts ? timeAgo(ts, now) : null,
     });
   } else if (!live && proof) {
+    const sig = proof.sigs.locks[proof.sigs.locks.length - 1]!;
     cards.push({
-      id: "lock", title: "Latest lock", value: proof.sigs.topup, display: shortAddress(proof.sigs.topup),
-      href: solscanTx(proof.sigs.topup, "devnet"), action: "Open Solscan", devnet: true, ts: null, ago: null,
+      id: "lock", title: "Latest buy", value: sig, display: shortAddress(sig),
+      href: solscanTx(sig, "devnet"), action: "Open Solscan", devnet: true, ts: null, ago: null,
     });
   }
 
   const notice =
     stake.state === "rpc_error"
-      ? "We couldn't read the chain just now, so the contract and lock shown are the devnet proof. This page checks again every minute."
+      ? "We couldn't read the chain just now, so the lock shown is the devnet proof. This page checks again every minute."
       : !live && proof
-        ? "$KESTIV has no stake contract yet. The devnet proof shows the same lock on a test token."
+        ? "$KESTIV has no lock yet. The devnet proof shows the same lock on a test token."
         : null;
   return { cards, notice };
 }

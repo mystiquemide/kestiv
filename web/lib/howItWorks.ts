@@ -1,7 +1,7 @@
-import type { DevnetProof, StakeView, StreamStep } from "./chain";
+import type { DevnetProof, LockStep, StakeView } from "./chain";
 import { dateUtc, formatFractionPct, shortAddress, solFromLamports, tokensCompact, tokensFull } from "./format";
 import { gateView, type GateView } from "./gates";
-import { solscanTx, type LinkCluster } from "./links";
+import { lockUrl, solscanTx, type LinkCluster } from "./links";
 import type { PublicStatus } from "./schema";
 import type { AgentStatus } from "./status";
 import { timeAgo } from "./time";
@@ -126,12 +126,12 @@ export function buyCard(status: AgentStatus, decimalsFallback: number | null = n
 // ---------- card 4: the staircase ----------
 
 export interface StaircasePoint {
-  /** Start of this deposit's tread. */
+  /** Start of this lock's tread. */
   x: number;
   y: number;
-  sig: string;
+  /** The lock this step is. */
+  id: string;
   ts: number;
-  kind: "create" | "topup";
   amount: string;
   cumulative: string;
 }
@@ -151,10 +151,10 @@ export interface Staircase {
 const PAD = { left: 16, right: 16, top: 36, bottom: 12 };
 
 /**
- * Step chart of cumulative deposits. x is deposit order, never time: every deposit is one tread of equal width,
+ * Step chart of cumulative deposits. x is deposit order, never time: every lock is one tread of equal width,
  * and its height is the cumulative total from zero.
  */
-export function staircase(steps: StreamStep[], decimals: number, width = 600, height = 180): Staircase | null {
+export function staircase(steps: LockStep[], decimals: number, width = 600, height = 180): Staircase | null {
   if (steps.length === 0) return null;
   const sorted = [...steps].sort((a, b) => a.ts - b.ts);
   let running = 0n;
@@ -170,9 +170,8 @@ export function staircase(steps: StreamStep[], decimals: number, width = 600, he
   const points: StaircasePoint[] = sorted.map((s, i) => ({
     x: round(PAD.left + i * tread),
     y: round(Y(cum[i]!)),
-    sig: s.sig,
+    id: s.id,
     ts: s.ts,
-    kind: s.kind,
     amount: s.amount,
     cumulative: cum[i]!.toString(),
   }));
@@ -185,8 +184,8 @@ export function staircase(steps: StreamStep[], decimals: number, width = 600, he
   const n = sorted.length;
   const ariaLabel =
     n === 1
-      ? `1 deposit of ${tokens(sorted[0]!.amount)} tokens`
-      : `${n} deposits, from ${tokens(cum[0]!)} to ${tokens(total)} tokens`;
+      ? `1 lock of ${tokens(sorted[0]!.amount)} tokens`
+      : `${n} locks, from ${tokens(cum[0]!)} to ${tokens(total)} tokens`;
 
   return {
     width,
@@ -208,10 +207,10 @@ export type LockCard =
       text: string;
       label: "Live" | "Devnet proof" | null;
       chart: Staircase;
-      list: { title: "Created" | "Top-up"; amount: string; date: string; href: string }[];
+      list: { title: string; amount: string; date: string; href: string }[];
     };
 
-const LOCK_TEXT = "One Streamflow contract holds the whole stake. Every buy tops it up. Nothing can pull tokens out early.";
+const LOCK_TEXT = "Every buy is locked in its own Jupiter lock for the founder. Nothing can pull tokens out early.";
 
 export function lockCard(
   stake: StakeView,
@@ -219,7 +218,7 @@ export function lockCard(
   live: { decimals: number } | null,
   devnetDecimals: number | null,
 ): LockCard {
-  let steps: StreamStep[];
+  let steps: LockStep[];
   let decimals: number;
   let cluster: LinkCluster;
   let label: "Live" | "Devnet proof" | null;
@@ -235,22 +234,22 @@ export function lockCard(
     cluster = "devnet";
     label = "Devnet proof";
   } else {
-    return { kind: "error", text: LOCK_TEXT, message: "We couldn't load the contract history just now. This page checks again every minute.", label: "Devnet proof" };
+    return { kind: "error", text: LOCK_TEXT, message: "We couldn't load the lock history just now. This page checks again every minute.", label: "Devnet proof" };
   }
 
   const chart = staircase(steps, decimals);
-  if (!chart) return { kind: "error", text: LOCK_TEXT, message: "We couldn't load the contract history just now. This page checks again every minute.", label: "Devnet proof" };
+  if (!chart) return { kind: "error", text: LOCK_TEXT, message: "We couldn't load the lock history just now. This page checks again every minute.", label: "Devnet proof" };
 
   return {
     kind: "chart",
     text: LOCK_TEXT,
     label,
     chart,
-    list: chart.points.map((p) => ({
-      title: p.kind === "create" ? "Created" : "Top-up",
+    list: chart.points.map((p, i) => ({
+      title: `Lock ${i + 1}`,
       amount: `${tokensFull(p.amount, decimals)} tokens`,
       date: dateUtc(p.ts),
-      href: solscanTx(p.sig, cluster),
+      href: lockUrl(p.id, cluster),
     })),
   };
 }

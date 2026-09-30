@@ -55,8 +55,8 @@ describe("run page content", () => {
 
   it("costs come from the agent's own numbers, with a fallback", () => {
     const rows = costRows(status);
-    expect(rows[0]!.value).toBe("About 0.18 SOL, once");
-    expect(rows[1]!.value).toBe("0.19% of the tokens locked");
+    expect(rows[0]!.value).toBe("About 0.006 SOL per lock");
+    expect(rows[1]!.value).toBe("None");
     expect(rows[2]!.value).toMatch(/lamports/);
     expect(costRows(down)[2]!.value).toBe("A few hundred lamports per check");
   });

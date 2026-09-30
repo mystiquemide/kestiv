@@ -13,9 +13,9 @@ const run = response.dry!;
 const withRun: AgentStatus = { ok: true, live: null, dry: run, fetchedAt: 1 };
 const down = { ok: false, error: "down" } as unknown as AgentStatus;
 const env = { cluster: "mainnet-beta" as const, wallet: "HXqExLdZuPYAqaP6vS87yr6ZEm6Q1KtudFx1nzYwKzs4", founder: "DC1B96Rw9yftgZN7HYktA47nneFSDbu5mpedkYPxJryB" };
-const off = { cancelableBySender: false, cancelableByRecipient: false, pausable: false, canUpdateRate: false, transferableBySender: false, transferableByRecipient: false };
+const off = { cancelNobody: true, recipientNobody: true };
 const active = (over: Partial<StakeView> = {}) =>
-  ({ state: "active", mint: "M", cluster: "mainnet-beta", supply: "1000", decimals: 6, capBps: 700, rpcKind: "helius", contractId: "STREAM", recipient: env.founder, sender: "S", stakePct: "1.84", flags: off, ...over }) as unknown as StakeView;
+  ({ state: "active", mint: "M", cluster: "mainnet-beta", supply: "1000", decimals: 6, capBps: 700, rpcKind: "helius", locks: [{ id: "ESCROW" }], recipient: env.founder, sender: "S", stakePct: "1.84", guarantees: off, ...over }) as unknown as StakeView;
 
 describe("stake page route", () => {
   it("is listed as live so the buttons that point at it show", () => {
@@ -32,18 +32,19 @@ describe("stake hero model", () => {
     expect(m.links.map((l) => l.label)).toEqual(["Kestiv wallet on Solscan"]);
   });
 
-  it("active: percentage, founder, Streamflow first, and the lock line from the flags", () => {
+  it("active: percentage, founder, latest lock first, and the lock line from the guarantees", () => {
     const m = stakeHero({ stake: active(), status: withRun, proof: null, env });
     expect(m.headline).toBe("1.84%");
     expect(m.recipient?.short).toBe("DC1B…JryB");
     expect(m.lockLine).toBe(LOCKED_LINE);
-    expect(m.links[0]!.href).toContain("streamflow.finance/contract/solana/mainnet/STREAM");
+    expect(m.links[0]!.href).toBe("https://lock.jup.ag/escrow/ESCROW");
   });
 
-  it("never claims more than the contract shows", () => {
-    expect(lockLine({ ...off, transferableByRecipient: true })).toMatch(/Switched on.*transfer/);
-    expect(lockLine({ ...off, pausable: true, canUpdateRate: true })).toMatch(/pause, rate change/);
-    const m = stakeHero({ stake: active({ flags: { ...off, cancelableBySender: true } } as never), status: withRun, proof: null, env });
+  it("never claims more than the locks show", () => {
+    expect(lockLine(off)).toBe(LOCKED_LINE);
+    expect(lockLine({ ...off, recipientNobody: false })).toMatch(/change the recipient/);
+    expect(lockLine({ cancelNobody: false, recipientNobody: false })).toMatch(/cancel and change the recipient/);
+    const m = stakeHero({ stake: active({ guarantees: { ...off, cancelNobody: false } } as never), status: withRun, proof: null, env });
     expect(m.lockLine).not.toBe(LOCKED_LINE);
   });
 
@@ -53,8 +54,8 @@ describe("stake hero model", () => {
     expect(m.lead).toMatch(/Cap reached at 7%\. Fees now go straight to the founder/);
   });
 
-  it("no contract: 0.00% with the first-lock budget from the agent's own numbers", () => {
-    const m = stakeHero({ stake: { state: "no_contract", mint: "M", cluster: "mainnet-beta", supply: "1", decimals: 6, capBps: 700, rpcKind: "helius" } as StakeView, status: withRun, proof: null, env });
+  it("no lock: 0.00% with the first-lock budget from the agent's own numbers", () => {
+    const m = stakeHero({ stake: { state: "no_lock", mint: "M", cluster: "mainnet-beta", supply: "1", decimals: 6, capBps: 700, rpcKind: "helius" } as StakeView, status: withRun, proof: null, env });
     expect(m.headline).toBe("0.00%");
     expect(m.budget).not.toBeNull();
     const b = firstLockBudget(withRun)!;
@@ -62,7 +63,7 @@ describe("stake hero model", () => {
     expect(b.haveLamports).toBe(run.budget!.walletLamports);
     expect(b.progress).toBeGreaterThanOrEqual(0);
     expect(b.progress).toBeLessThanOrEqual(1);
-    expect(budgetText(b)).toMatch(/^The first lock needs about .* SOL: contract .*, first slice .*, reserve .*\. Kestiv has .* SOL\.$/);
+    expect(budgetText(b)).toMatch(/^The first lock needs about .* SOL: lock .*, first slice .*, reserve .*\. Kestiv has .* SOL\.$/);
   });
 
   it("no budget when the agent feed is down", () => {
@@ -82,12 +83,12 @@ describe("stake hero markup", () => {
     expect(html.match(/<h1/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Copy founder address"');
     expect(html).toContain('rel="noopener noreferrer"');
-    expect(html).toContain("View on Streamflow");
+    expect(html).toContain("View the latest lock on Jupiter");
     expect(html).not.toContain("—");
   });
 
-  it("shows the progress bar with an accessible value when there is no contract", () => {
-    const m = stakeHero({ stake: { state: "no_contract", mint: "M", cluster: "mainnet-beta", supply: "1", decimals: 6, capBps: 700, rpcKind: "helius" } as StakeView, status: withRun, proof: null, env });
+  it("shows the progress bar with an accessible value when there is no lock", () => {
+    const m = stakeHero({ stake: { state: "no_lock", mint: "M", cluster: "mainnet-beta", supply: "1", decimals: 6, capBps: 700, rpcKind: "helius" } as StakeView, status: withRun, proof: null, env });
     const html = renderToStaticMarkup(<StakeHero model={m} />);
     expect(html).toContain('role="progressbar"');
     expect(html).toContain("aria-valuetext");

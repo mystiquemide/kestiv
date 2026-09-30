@@ -14,7 +14,7 @@ export function StaircaseChart({ chart }: { chart: StaircaseModel }) {
         >
           <path d={chart.path} fill="none" stroke="#1F1F1F" strokeWidth={2} />
           {chart.points.map((p) => (
-            <rect key={p.sig} x={p.x - 3} y={p.y - 3} width={6} height={6} fill="#D9A441" stroke="#1F1F1F" strokeWidth={1} />
+            <rect key={p.id} x={p.x - 3} y={p.y - 3} width={6} height={6} fill="#D9A441" stroke="#1F1F1F" strokeWidth={1} />
           ))}
         </svg>
         <span
@@ -26,7 +26,7 @@ export function StaircaseChart({ chart }: { chart: StaircaseModel }) {
       </div>
       <div className="mt-2 flex justify-between text-caption text-helper">
         <span>
-          First deposit <span className="num">{chart.firstDate}</span>
+          First lock <span className="num">{chart.firstDate}</span>
         </span>
         <span>
           Latest <span className="num">{chart.lastDate}</span>

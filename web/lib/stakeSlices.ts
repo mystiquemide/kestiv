@@ -44,7 +44,7 @@ export function slicesModel(args: { status: AgentStatus; stake: StakeView }): Sl
   const live = status.live;
   if (!live || live.slices.length === 0) return { kind: "empty", message: EMPTY };
 
-  const decimals = stake.state === "active" || stake.state === "cap_reached" || stake.state === "no_contract" ? stake.decimals : null;
+  const decimals = stake.state === "active" || stake.state === "cap_reached" || stake.state === "no_lock" ? stake.decimals : null;
   const cluster: LinkCluster = live.cluster === "devnet" ? "devnet" : "mainnet-beta";
   const oldestFirst = [...live.slices].sort((a, b) => a.ts - b.ts);
   const rows = oldestFirst

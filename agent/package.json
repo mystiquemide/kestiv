@@ -17,7 +17,6 @@
   "dependencies": {
     "@solana/spl-token": "0.4.15",
     "@solana/web3.js": "1.98.4",
-    "@streamflow/stream": "13.4.0",
     "better-sqlite3": "13.0.3",
     "bn.js": "5.2.5",
     "bs58": "6.0.0",

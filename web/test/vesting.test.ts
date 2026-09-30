@@ -14,9 +14,14 @@ const terms: VestingTerms = {
 };
 
 describe("vestingNow", () => {
-  it("before the cliff nothing is vested and the next unlock is the cliff", () => {
-    expect(vestingNow(terms, t0 + DAY)).toEqual({ vested: "0", locked: "365000", nextUnlock: terms.cliff });
-    expect(vestingNow(terms, terms.cliff - 1)).toEqual({ vested: "0", locked: "365000", nextUnlock: terms.cliff });
+  it("before the cliff nothing is vested and the first unlock is one period after it", () => {
+    expect(vestingNow(terms, t0 + DAY)).toEqual({ vested: "0", locked: "365000", nextUnlock: terms.cliff + DAY });
+    expect(vestingNow(terms, terms.cliff - 1)).toEqual({ vested: "0", locked: "365000", nextUnlock: terms.cliff + DAY });
+  });
+
+  it("with a lump at the cliff the lump is the next unlock", () => {
+    const lump = { ...terms, cliffAmount: "5000" };
+    expect(vestingNow(lump, t0).nextUnlock).toBe(lump.cliff);
   });
 
   it("at the cliff itself the first period has not completed", () => {

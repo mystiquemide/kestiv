@@ -16,16 +16,16 @@ const response = StatusResponseSchema.parse(JSON.parse(readFileSync(new URL("./f
 const run = { ...response.dry!, latest: { buySig: "BUY", buyTs: 1000, lockSig: "LOCKSIG1234567890", lockTs: 1000 } };
 const down: AgentStatus = { ok: false, error: "down" } as unknown as AgentStatus;
 const withLive: AgentStatus = { ok: true, live: run, dry: null, fetchedAt: 1 };
-const proof = { cluster: "devnet", stream: { id: "G28zWX3sniaou4EBCuBBTc1tY4kewyfRU2eT7V65fQiV" }, sigs: { create: "C", topup: "TOPUPSIG1234567890", cancel: "X" } } as unknown as DevnetProof;
-const active = { state: "active", cluster: "mainnet-beta", contractId: "STREAMCONTRACT123456" } as unknown as StakeView;
+const proof = { cluster: "devnet", locks: [{ id: "G28zWX3sniaou4EBCuBBTc1tY4kewyfRU2eT7V65fQiV" }, { id: "SECONDLOCK" }], sigs: { locks: ["C", "BUYSIG1234567890"], cancel: "X" } } as unknown as DevnetProof;
+const active = { state: "active", cluster: "mainnet-beta", locks: [{ id: "ESCROW123456" }, { id: "LATESTESCROW123456" }] } as unknown as StakeView;
 const env = { cluster: "mainnet-beta" as const, wallet: "HXqExLdZuPYAqaP6vS87yr6ZEm6Q1KtudFx1nzYwKzs4" };
 
 describe("verify model", () => {
-  it("links the live contract, wallet and latest lock on mainnet", () => {
+  it("links the latest live lock, wallet and latest buy on mainnet", () => {
     const m = verifyModel({ stake: active, status: withLive, proof, env, now: 4600 });
     expect(m.cards.map((c) => c.id)).toEqual(["contract", "wallet", "lock"]);
     expect(m.cards.every((c) => !c.devnet)).toBe(true);
-    expect(m.cards[0]!.href).toContain("/mainnet/STREAMCONTRACT123456");
+    expect(m.cards[0]!.href).toBe("https://lock.jup.ag/escrow/LATESTESCROW123456");
     expect(m.cards[2]!.href).toContain("solscan.io/tx/LOCKSIG1234567890");
     expect(m.cards[2]!.ago).toBe("1h ago");
     expect(m.notice).toBeNull();
@@ -36,9 +36,9 @@ describe("verify model", () => {
     const contract = m.cards.find((c) => c.id === "contract")!;
     const lock = m.cards.find((c) => c.id === "lock")!;
     expect(contract.devnet && lock.devnet).toBe(true);
-    expect(contract.href).toContain("/devnet/");
+    expect(contract.href).toBe("https://solscan.io/account/SECONDLOCK?cluster=devnet");
     expect(lock.href).toContain("cluster=devnet");
-    expect(m.notice).toMatch(/no stake contract yet/);
+    expect(m.notice).toMatch(/no lock yet/);
   });
 
   it("leaves out cards with no target", () => {
@@ -56,7 +56,7 @@ describe("verify model", () => {
   it("renders external links safely with the full value on hover", () => {
     const html = renderToStaticMarkup(<Verify model={verifyModel({ stake: active, status: withLive, proof, env, now: 4600 })} />);
     expect(html).toContain('rel="noopener noreferrer"');
-    expect(html).toContain('title="STREAMCONTRACT123456"');
+    expect(html).toContain('title="LATESTESCROW123456"');
   });
 });
 

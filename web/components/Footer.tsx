@@ -59,7 +59,7 @@ export async function Footer() {
   const stake: StakeView = await getStakeView({ env });
   return (
     <FooterView
-      stake={stake.state === "active" || stake.state === "cap_reached" ? { state: stake.state, contractId: stake.contractId } : { state: stake.state }}
+      stake={stake.state === "active" || stake.state === "cap_reached" ? { state: stake.state, latestLock: stake.locks[stake.locks.length - 1]?.id } : { state: stake.state }}
       env={{ cluster: env.cluster, mint: env.mint, wallet: env.wallet, repoUrl: env.repoUrl }}
     />
   );

@@ -1,144 +1,140 @@
 import { readFileSync } from "node:fs";
-import type { ParsedTransactionWithMeta } from "@solana/web3.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cached, clearChainCache, escrowStep, getStakeView, parseStreamAccount, type FoundStream, type StreamData, type StakeViewDeps } from "../lib/chain";
+import { cached, clearChainCache, getStakeView, stepsOf, type StakeViewDeps } from "../lib/chain";
+import { guaranteesOf, isFounderLock, lockTotals, parseLockAccount, type LockData } from "../lib/lock";
 
 const fixture = <T>(name: string): T => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), "utf8")) as T;
 
-const acct = fixture<{ id: string; data: string }>("devnet-stream");
+const acct = fixture<{ id: string; data: string }>("devnet-lock");
 const FOUNDER = "DC1B96Rw9yftgZN7HYktA47nneFSDbu5mpedkYPxJryB";
+const DAY = 86_400;
 
-describe("parseStreamAccount (real devnet proof contract bytes)", () => {
-  const s = parseStreamAccount(acct.id, Buffer.from(acct.data, "base64"));
+describe("parseLockAccount (real devnet proof lock bytes)", () => {
+  const l = parseLockAccount(acct.id, Buffer.from(acct.data, "base64"));
 
-  it("decodes amounts, schedule and parties", () => {
-    expect(s).toMatchObject({
-      id: "G28zWX3sniaou4EBCuBBTc1tY4kewyfRU2eT7V65fQiV",
+  it("decodes the parties, amounts and schedule", () => {
+    expect(l).toMatchObject({
+      id: "5hdB38wWZw6THDLvJyYGCHu2oPEutYz7MfmVkifZvb3s",
       recipient: FOUNDER,
-      mint: "4FsVBoTVt4JvTjiiSuYkiWybdY7f3KjSQ4zByQgLQ8u1",
-      depositedAmount: "150000000000",
-      withdrawnAmount: "0",
-      period: 86_400,
-      cliffAmount: "0",
-      closed: false,
+      mint: "7DvZoDAQvv1XdcFSauT1LKYjkE8o5DuZiWjbGpZYE37Y",
+      creator: "6ML4WUqTnPm8kNrpWCEMSBhrmE2N3zFocdrEPDJGe8Es",
+      frequency: DAY,
+      periods: 365,
+      cliffUnlockAmount: "0",
+      amountPerPeriod: "273972602",
+      claimed: "0",
+      deposited: "99999999730",
+      tokenProgramFlag: 1,
     });
-    expect(s.cliff).toBe(s.start);
-    expect(s.end).toBeGreaterThan(s.start);
+    expect(l.cliff - l.start).toBe(90 * DAY);
+    expect(l.end).toBe(l.cliff + 365 * DAY);
   });
 
-  it("reads every trust flag, including pausable and canUpdateRate from raw bytes", () => {
-    expect(s.flags).toEqual({
-      canTopup: true,
-      cancelableBySender: false,
-      cancelableByRecipient: false,
-      transferableBySender: false,
-      transferableByRecipient: false,
-      automaticWithdrawal: false,
-      canUpdateRate: false,
-      pausable: false,
-    });
-  });
-
-  it("reports canUpdateRate and pausable when those bytes are set", () => {
+  it("reads who can cancel and who can change the recipient from the bytes", () => {
+    expect(l).toMatchObject({ cancelMode: 0, updateRecipientMode: 0, cancelledAt: 0 });
+    expect(guaranteesOf([l])).toEqual({ cancelNobody: true, recipientNobody: true });
     const data = Buffer.from(acct.data, "base64");
-    data[539] = 1;
-    data[540] = 1;
-    expect(parseStreamAccount(acct.id, data).flags).toMatchObject({ pausable: true, canUpdateRate: true });
+    data[138] = 1;
+    data[137] = 1;
+    expect(guaranteesOf([parseLockAccount(acct.id, data)])).toEqual({ cancelNobody: false, recipientNobody: false });
+  });
+
+  it("refuses bytes that are not a Jupiter Lock escrow", () => {
+    expect(() => parseLockAccount("x", Buffer.alloc(296))).toThrow(/not a Jupiter Lock escrow/);
+    expect(() => parseLockAccount("x", Buffer.from(acct.data, "base64").subarray(0, 200))).toThrow();
+  });
+
+  it("counts a lock only when the creator, recipient and mint all match", () => {
+    const want = { creator: l.creator, recipient: FOUNDER, mint: l.mint };
+    expect(isFounderLock(l, want)).toBe(true);
+    expect(isFounderLock(l, { ...want, recipient: "OTHER" })).toBe(false);
+    expect(isFounderLock(l, { ...want, creator: "OTHER" })).toBe(false);
+    expect(isFounderLock(l, { ...want, mint: "OTHER" })).toBe(false);
   });
 });
 
-describe("escrowStep (real devnet create and topup transactions)", () => {
-  const s = parseStreamAccount(acct.id, Buffer.from(acct.data, "base64"));
-  const tx = (n: string) => fixture<ParsedTransactionWithMeta>(n);
+const lock = (id: string, over: Partial<LockData> = {}): LockData => ({
+  id, recipient: FOUNDER, mint: "MINT", creator: "WALLET", updateRecipientMode: 0, cancelMode: 0, tokenProgramFlag: 0,
+  cliff: 2_000 + 90 * DAY, frequency: DAY, cliffUnlockAmount: "0", amountPerPeriod: "41096", periods: 365, claimed: "0", start: 2_000, cancelledAt: 0,
+  deposited: "15000040", end: 2_000 + 455 * DAY, ...over,
+});
 
-  it("reads the create as 100,000 tokens and the topup as 50,000", () => {
-    expect(escrowStep(tx("devnet-create-tx"), s.id, s.escrowTokens)).toEqual({ kind: "create", amount: 100_000_000_000n });
-    expect(escrowStep(tx("devnet-topup-tx"), s.id, s.escrowTokens)).toEqual({ kind: "topup", amount: 50_000_000_000n });
-  });
-
-  it("ignores transactions that do not touch the escrow or that failed", () => {
-    expect(escrowStep(tx("devnet-topup-tx"), s.id, "11111111111111111111111111111111")).toBeNull();
-    const failed = { ...tx("devnet-topup-tx"), meta: { ...tx("devnet-topup-tx").meta!, err: { InstructionError: [0, { Custom: 131 }] } } };
-    expect(escrowStep(failed as ParsedTransactionWithMeta, s.id, s.escrowTokens)).toBeNull();
+describe("lockTotals and stepsOf", () => {
+  it("adds up every lock and takes the first cliff and the last end", () => {
+    const a = lock("A");
+    const b = lock("B", { start: 5_000, cliff: 5_000 + 90 * DAY, end: 5_000 + 455 * DAY, deposited: "30000000" });
+    const t = lockTotals([a, b], 1_000);
+    expect(t).toMatchObject({ deposited: "45000040", claimed: "0", vested: "0", locked: "45000040", cliff: a.cliff, end: b.end });
+    expect(t.nextUnlock).toBe(a.cliff + DAY);
+    expect(stepsOf([b, a]).map((s) => s.id)).toEqual(["A", "B"]);
   });
 });
 
 const baseEnv = { heliusApiKey: "k", cluster: "mainnet-beta" as const, mint: "MINT", wallet: "WALLET", founder: FOUNDER, statusUrl: undefined, repoUrl: undefined };
-const stream = (over: Partial<StreamData> = {}): StreamData => ({
-  id: "STREAM",
-  sender: "WALLET",
-  recipient: FOUNDER,
-  mint: "MINT",
-  escrowTokens: "ESC",
-  depositedAmount: "15000000",
-  withdrawnAmount: "0",
-  start: 2_000,
-  cliff: 2_000,
-  end: 2_000 + 365 * 86_400,
-  period: 86_400,
-  amountPerPeriod: "41096",
-  cliffAmount: "0",
-  createdAt: 1_000,
-  closed: false,
-  flags: { canTopup: true, cancelableBySender: false, cancelableByRecipient: false, transferableBySender: false, transferableByRecipient: false, automaticWithdrawal: false, canUpdateRate: false, pausable: false },
-  ...over,
-});
-const deps = (found: FoundStream | null, over: Partial<StakeViewDeps> = {}): StakeViewDeps => ({
+const deps = (locks: LockData[], over: Partial<StakeViewDeps> = {}): StakeViewDeps => ({
   env: baseEnv,
   capBps: async () => null,
   nowSec: () => 1_000,
   supply: async () => ({ supply: "1000000000", decimals: 6 }),
-  find: async () => found,
-  steps: async () => [{ sig: "S1", ts: 1_500, kind: "create", amount: "15000000" }],
+  locks: async () => locks,
   ...over,
 });
 
 describe("getStakeView state selection", () => {
   it("not_launched without a mint, without touching the chain", async () => {
-    const find = vi.fn();
-    const v = await getStakeView({ ...deps(null, { find }), env: { ...baseEnv, mint: undefined } });
+    const locks = vi.fn();
+    const v = await getStakeView({ ...deps([], { locks }), env: { ...baseEnv, mint: undefined } });
     expect(v).toEqual({ state: "not_launched" });
-    expect(find).not.toHaveBeenCalled();
+    expect(locks).not.toHaveBeenCalled();
   });
 
-  it("no_contract when the mint is set but no stream exists", async () => {
-    const v = await getStakeView(deps(null));
-    expect(v).toMatchObject({ state: "no_contract", mint: "MINT", supply: "1000000000", decimals: 6, capBps: 700, rpcKind: "helius" });
+  it("no_lock when the mint is set but nothing is locked", async () => {
+    const v = await getStakeView(deps([]));
+    expect(v).toMatchObject({ state: "no_lock", mint: "MINT", supply: "1000000000", decimals: 6, capBps: 700, rpcKind: "helius" });
   });
 
-  it("active with stake percent, vesting numbers and steps", async () => {
-    const v = await getStakeView(deps({ stream: stream(), multiple: false }));
+  it("active with stake percent, totals, guarantees and steps", async () => {
+    const v = await getStakeView(deps([lock("A")]));
     expect(v.state).toBe("active");
     if (v.state !== "active") throw new Error("unreachable");
-    expect(v).toMatchObject({ contractId: "STREAM", stakePct: "1.5000", recipient: FOUNDER, locked: "15000000", vested: "0", nextUnlock: 2_000, multiple: false });
-    expect(v.steps).toHaveLength(1);
+    expect(v).toMatchObject({ stakePct: "1.5000", recipient: FOUNDER, sender: "WALLET", locked: "15000040", vested: "0", guarantees: { cancelNobody: true, recipientNobody: true } });
+    expect(v.nextUnlock).toBe(lock("A").cliff + DAY);
+    expect(v.steps).toEqual([{ id: "A", ts: 2_000, amount: "15000040" }]);
+  });
+
+  it("adds every lock into one stake", async () => {
+    const v = await getStakeView(deps([lock("A"), lock("B", { start: 3_000 })]));
+    if (v.state !== "active") throw new Error("expected active");
+    expect(v.stakePct).toBe("3.0000");
+    expect(v.steps).toHaveLength(2);
   });
 
   it("cap_reached when locked stake is at least capBps of supply", async () => {
-    const v = await getStakeView(deps({ stream: stream({ depositedAmount: "70000000" }), multiple: false }));
+    const v = await getStakeView(deps([lock("A", { deposited: "70000000" })]));
     expect(v.state).toBe("cap_reached");
   });
 
-  it("uses the agent's cap when available and subtracts withdrawals from the stake", async () => {
-    const big = stream({ depositedAmount: "90000000", withdrawnAmount: "30000000" });
-    expect((await getStakeView(deps({ stream: big, multiple: false }, { capBps: async () => 500 }))).state).toBe("cap_reached");
-    expect((await getStakeView(deps({ stream: big, multiple: false }, { capBps: async () => 700 }))).state).toBe("active");
+  it("uses the agent's cap when available", async () => {
+    const big = lock("A", { deposited: "60000000" });
+    expect((await getStakeView(deps([big], { capBps: async () => 500 }))).state).toBe("cap_reached");
+    expect((await getStakeView(deps([big], { capBps: async () => 700 }))).state).toBe("active");
   });
 
-  it("flags multiple contracts", async () => {
-    const v = await getStakeView(deps({ stream: stream(), multiple: true }));
-    expect(v).toMatchObject({ multiple: true });
+  it("says so when any lock could be cancelled", async () => {
+    const v = await getStakeView(deps([lock("A"), lock("B", { cancelMode: 1 })]));
+    if (v.state !== "active") throw new Error("expected active");
+    expect(v.guarantees).toEqual({ cancelNobody: false, recipientNobody: true });
   });
 
   it("returns rpc_error with no partial numbers and never leaks the key", async () => {
-    const v = await getStakeView(deps(null, { supply: async () => { throw new Error("boom https://mainnet.helius-rpc.com/?api-key=SECRET123 failed"); } }));
+    const v = await getStakeView(deps([], { supply: async () => { throw new Error("boom https://mainnet.helius-rpc.com/?api-key=SECRET123 failed"); } }));
     expect(v).toMatchObject({ state: "rpc_error", rpcKind: "helius" });
     expect(JSON.stringify(v)).not.toContain("SECRET123");
     expect(v).not.toHaveProperty("supply");
   });
 
   it("reports public rpc kind without a Helius key and errors when wallets are missing", async () => {
-    const v = await getStakeView({ ...deps(null), env: { ...baseEnv, heliusApiKey: undefined, wallet: undefined } });
+    const v = await getStakeView({ ...deps([]), env: { ...baseEnv, heliusApiKey: undefined, wallet: undefined } });
     expect(v).toMatchObject({ state: "rpc_error", rpcKind: "public" });
   });
 });

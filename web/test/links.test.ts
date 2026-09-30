@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { pumpFunCoin, solscanAccount, solscanTx, streamflowUrl } from "../lib/links";
+import { pumpFunCoin, solscanAccount, solscanTx, lockUrl } from "../lib/links";
 import { isCurrent } from "../lib/nav";
 
 describe("links", () => {
-  it("builds the verified Streamflow contract URL per cluster", () => {
-    expect(streamflowUrl("ABC", "devnet")).toBe("https://app.streamflow.finance/contract/solana/devnet/ABC");
-    expect(streamflowUrl("ABC", "mainnet-beta")).toBe("https://app.streamflow.finance/contract/solana/mainnet/ABC");
+  it("opens a lock on Jupiter Lock on mainnet and on Solscan on devnet", () => {
+    expect(lockUrl("ABC", "devnet")).toBe("https://solscan.io/account/ABC?cluster=devnet");
+    expect(lockUrl("ABC", "mainnet-beta")).toBe("https://lock.jup.ag/escrow/ABC");
   });
 
   it("adds the devnet cluster query to Solscan links only on devnet", () => {

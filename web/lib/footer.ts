@@ -1,5 +1,5 @@
 import { routeLive } from "./routes";
-import { X_URL, pumpFunCoin, solscanAccount, streamflowUrl, type LinkCluster } from "./links";
+import { X_URL, pumpFunCoin, solscanAccount, lockUrl, type LinkCluster } from "./links";
 
 export interface FooterLinkSpec {
   label: string;
@@ -15,15 +15,15 @@ export interface FooterSection {
 }
 
 export interface FooterInput {
-  stake: { state: string; contractId?: string };
+  stake: { state: string; latestLock?: string };
   env: { cluster: LinkCluster; mint?: string; wallet?: string; repoUrl?: string };
 }
 
-/** Links only exist when their target does. No mint means no pump.fun link, no contract means no contract link. */
+/** Links only exist when their target does. No mint means no pump.fun link, no lock means no lock link. */
 export function footerSections({ stake, env }: FooterInput): FooterSection[] {
   const proof: FooterLinkSpec[] = [];
-  if ((stake.state === "active" || stake.state === "cap_reached") && stake.contractId) {
-    proof.push({ label: "Vesting contract", href: streamflowUrl(stake.contractId, env.cluster), external: true });
+  if ((stake.state === "active" || stake.state === "cap_reached") && stake.latestLock) {
+    proof.push({ label: "Latest lock", href: lockUrl(stake.latestLock, env.cluster), external: true });
   }
   if (env.wallet) proof.push({ label: "Kestiv wallet", href: solscanAccount(env.wallet, env.cluster), external: true });
   if (env.mint && env.cluster === "mainnet-beta") {

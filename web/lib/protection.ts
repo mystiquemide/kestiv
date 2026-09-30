@@ -26,11 +26,11 @@ export interface ProtectionModel {
     | { kind: "empty"; heading: string; text: string; message: string };
 }
 
-// Verified on devnet: Streamflow's update instruction cannot enable cancel, pause or rate changes. It can enable
-// transfer by the recipient, so the agent's signer refuses every Streamflow instruction except create and top-up
-// (agent/src/chain/guard.ts).
+// Verified on devnet: cancel and change-recipient modes are fixed when a Jupiter lock is created, and a lock created with
+// them set to nobody refuses both (Custom error 6005). The agent's signer also refuses every Jupiter Lock instruction
+// except create (agent/src/chain/guard.ts).
 export const CANCEL_TEXT =
-  "Cancel, pause and rate changes are switched off when the contract is created, and Streamflow has no way to switch them on later. Transfer starts off too, and Kestiv's signer refuses the one Streamflow instruction that could turn it on.";
+  "Cancel and change-recipient are set to nobody when each lock is created, and Jupiter Lock has no way to switch them on later. Kestiv's signer also refuses every Jupiter Lock instruction except creating a lock.";
 
 export function protectionModel(args: {
   status: AgentStatus;

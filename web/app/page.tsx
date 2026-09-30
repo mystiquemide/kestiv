@@ -32,7 +32,7 @@ export default async function Home() {
     latest?.quote && latest.quote.decimals === null
       ? await getMintSupply(latest.mint, latest.cluster === "devnet" ? "devnet" : "mainnet-beta").then((m) => m.decimals).catch(() => null)
       : null;
-  const devnetDecimals = proof ? await getMintSupply(proof.stream.mint, "devnet").then((m) => m.decimals).catch(() => null) : null;
+  const devnetDecimals = proof ? await getMintSupply(proof.mint, "devnet").then((m) => m.decimals).catch(() => null) : null;
   const liveStake = stake.state === "active" || stake.state === "cap_reached" ? { decimals: stake.decimals } : null;
 
   return (

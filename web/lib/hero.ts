@@ -1,6 +1,6 @@
-import type { DevnetProof, StakeView, StreamFlags } from "./chain";
-import { DEVNET_PROOF } from "./chain";
-import { solscanAccount, solscanTx, streamflowUrl, type LinkCluster } from "./links";
+import type { DevnetProof, StakeView } from "./chain";
+import type { LockGuarantees } from "./lock";
+import { lockUrl, solscanAccount, solscanTx, type LinkCluster } from "./links";
 import { dateUtc, formatStakePct, shortAddress, solFromLamports, tokensCompact } from "./format";
 import { gateView } from "./gates";
 import type { PublicStatus } from "./schema";
@@ -49,9 +49,9 @@ export function reasonText(reason: string, minSliceLamports: number): string {
     all_gates_passed: "Every check passed.",
     gates_passed_so_far: "Every check so far passed.",
     all_evaluated_gates_passed: "Every check Kestiv could run passed.",
-    insufficient_sol_for_contract: "Not enough SOL to open the vesting contract yet.",
+    insufficient_sol_for_lock: "Not enough SOL to open a new lock yet.",
     pending_confirmation: "Waiting for the last buy to confirm.",
-    lock_terms_violation: "The vesting contract's terms changed, so Kestiv stopped buying. Check the contract on Streamflow.",
+    lock_terms_violation: "A lock no longer has the terms Kestiv set, so Kestiv stopped buying. Check the lock on Jupiter Lock.",
     run_failed: "The run hit an error and stopped. It tries again on its next run.",
     buy_unconfirmed: "A buy was sent but isn't confirmed yet.",
     buy_failed: "The buy didn't go through.",
@@ -65,7 +65,7 @@ export const REASON_CODES = [
   "cap_reached", "cooldown", "price_unavailable", "volume_unavailable", "volume_below_min", "holders_unavailable",
   "holders_below_min", "liquidity_unavailable", "not_enough_trades", "budget_below_min_slice", "liquidity_cap_below_min_slice",
   "cap_headroom_below_min_slice", "price_impact_too_high", "price_above_vwap", "usepod_skip", "usepod_quote_too_high",
-  "usepod_unavailable", "all_gates_passed", "gates_passed_so_far", "all_evaluated_gates_passed", "insufficient_sol_for_contract",
+  "usepod_unavailable", "all_gates_passed", "gates_passed_so_far", "all_evaluated_gates_passed", "insufficient_sol_for_lock",
   "pending_confirmation", "lock_terms_violation", "run_failed", "buy_unconfirmed", "buy_failed", "bought_lock_deferred", "bought_and_locked",
 ] as const;
 
@@ -77,7 +77,7 @@ export function stateLabel(state: string): string {
 
 export type StakePanelModel =
   | { kind: "not_launched"; headline: string; text: string; rows: Row[] }
-  | { kind: "no_contract" | "active" | "cap_reached"; headline: string; note?: string; rows: Row[] }
+  | { kind: "no_lock" | "active" | "cap_reached"; headline: string; note?: string; rows: Row[] }
   | { kind: "error"; message: string; rows: Row[] };
 
 export interface StakePanelInput {
@@ -125,9 +125,9 @@ export function stakePanel({ stake, status, founder, cluster }: StakePanelInput)
         message: "We couldn't read the chain just now. This page checks again every minute.",
         rows: recipient,
       };
-    case "no_contract":
+    case "no_lock":
       return {
-        kind: "no_contract",
+        kind: "no_lock",
         headline: "0.00%",
         rows: [{ label: "Locked", value: "0", mono: true }, { label: "Next unlock", value: "After the first lock" }, ...config, ...recipient, cap],
       };
@@ -221,28 +221,34 @@ export interface LockPanelModel {
   error: string | null;
   cells: { label: string; value: string; tone: "default" | "refusal" }[];
   cancelAttemptHref: string | null;
-  streamflowHref: string | null;
+  /** Where to look at the latest lock, with the name of the page it opens. */
+  lockLink: { href: string; label: string } | null;
 }
 
 const cell = (label: string, value: string, bad: boolean) => ({ label, value, tone: bad ? ("refusal" as const) : ("default" as const) });
 
-export function flagCells(f: StreamFlags) {
+/** What the chain says about every lock: who can cancel, who can change the recipient, how many locks, when they unlock. */
+export function lockCells(g: LockGuarantees, count: number) {
   return [
-    cell("Cancel", f.cancelableBySender || f.cancelableByRecipient ? "Allowed" : "Nobody", f.cancelableBySender || f.cancelableByRecipient),
-    cell("Transfer", f.transferableBySender || f.transferableByRecipient ? "Allowed" : "Nobody", f.transferableBySender || f.transferableByRecipient),
-    cell("Rate changes", f.canUpdateRate ? "On" : "Off", f.canUpdateRate),
-    cell("Pause", f.pausable ? "On" : "Off", f.pausable),
+    cell("Cancel", g.cancelNobody ? "Nobody" : "Someone can", !g.cancelNobody),
+    cell("Change recipient", g.recipientNobody ? "Nobody" : "Someone can", !g.recipientNobody),
+    cell("Locks", String(count), false),
+    cell("Unlocks", "Daily after 90 days", false),
   ];
 }
 
+const linkFor = (id: string, cluster: LinkCluster) => ({ href: lockUrl(id, cluster), label: cluster === "devnet" ? "Open on Solscan" : "Open on Jupiter Lock" });
+
 export function lockPanel(stake: StakeView, proof: DevnetProof | null): LockPanelModel {
   if (stake.state === "active" || stake.state === "cap_reached") {
+    const latest = stake.locks[stake.locks.length - 1]!;
+    const cluster: LinkCluster = stake.cluster === "devnet" ? "devnet" : "mainnet-beta";
     return {
       label: "Live",
       error: null,
-      cells: flagCells(stake.flags),
+      cells: lockCells(stake.guarantees, stake.locks.length),
       cancelAttemptHref: null,
-      streamflowHref: streamflowUrl(stake.contractId, stake.cluster),
+      lockLink: linkFor(latest.id, cluster),
     };
   }
   if (!proof) {
@@ -251,15 +257,15 @@ export function lockPanel(stake: StakeView, proof: DevnetProof | null): LockPane
       error: "We couldn't load the devnet proof just now. This page checks again every minute.",
       cells: [],
       cancelAttemptHref: null,
-      streamflowHref: null,
+      lockLink: null,
     };
   }
   return {
     label: "Devnet proof",
     error: null,
-    cells: flagCells(proof.stream.flags),
+    cells: lockCells(proof.guarantees, proof.locks.length),
     cancelAttemptHref: proof.cancel?.err ? solscanTx(proof.cancel.sig, "devnet") : null,
-    streamflowHref: streamflowUrl(DEVNET_PROOF.contractId, "devnet"),
+    lockLink: linkFor(proof.locks[proof.locks.length - 1]!.id, "devnet"),
   };
 }
 

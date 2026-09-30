@@ -15,9 +15,9 @@ export interface VestingNow {
 }
 
 /**
- * Streamflow unlock rule (same as calculateUnlockedAmount in the SDK, with no rate changes):
- * 0 before the cliff, then cliffAmount + floor((t - cliff) / period) * amountPerPeriod, capped at the deposit, and
- * the whole deposit once t is past the end.
+ * Jupiter Lock unlock rule, measured on devnet with a 10 second schedule: nothing before the cliff, and nothing at the cliff
+ * itself. From the cliff on it is cliffAmount + floor((t - cliff) / period) * amountPerPeriod, capped at the deposit.
+ * So with no lump at the cliff, the first unlock is one period after it.
  */
 export function vestingNow(s: VestingTerms, nowSec: number): VestingNow {
   const deposited = BigInt(s.depositedAmount);
@@ -34,7 +34,7 @@ export function vestingNow(s: VestingTerms, nowSec: number): VestingNow {
 
   let nextUnlock: number | null;
   if (vested >= deposited) nextUnlock = null;
-  else if (nowSec < s.cliff) nextUnlock = s.cliff;
+  else if (nowSec < s.cliff) nextUnlock = cliffAmount > 0n ? s.cliff : Math.min(s.cliff + s.period, s.end);
   else {
     const next = s.cliff + (Math.floor((nowSec - s.cliff) / s.period) + 1) * s.period;
     nextUnlock = Math.min(next, s.end);

@@ -1,3 +1,4 @@
+import { lockTerms } from "./lock";
 import type { DevnetProof, StakeView } from "./chain";
 import { dateUtc, formatStakePct, tokensFull } from "./format";
 import { capText } from "./hero";
@@ -50,11 +51,14 @@ export function stakeStats(args: {
     vested = tokensFull(live.vested, live.decimals);
     next = live.nextUnlock;
   } else if (proof && devnetDecimals !== null) {
-    const s = proof.stream;
-    const v = vestingNow(
-      { depositedAmount: s.depositedAmount, withdrawnAmount: s.withdrawnAmount, cliff: s.cliff, cliffAmount: s.cliffAmount, end: s.end, period: s.period, amountPerPeriod: s.amountPerPeriod },
-      now,
-    );
+    const schedules = proof.locks.map(lockTerms);
+    const nows = schedules.map((sc) => vestingNow(sc, now));
+    const sum = (f: (v: (typeof nows)[number]) => string) => nows.reduce((t, v) => t + BigInt(f(v)), 0n).toString();
+    const v = {
+      locked: sum((x) => x.locked),
+      vested: sum((x) => x.vested),
+      nextUnlock: nows.map((x) => x.nextUnlock).filter((t): t is number => t !== null).sort((x, y) => x - y)[0] ?? null,
+    };
     locked = tokensFull(v.locked, devnetDecimals);
     vested = tokensFull(v.vested, devnetDecimals);
     next = v.nextUnlock;

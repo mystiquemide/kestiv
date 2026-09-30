@@ -13,40 +13,40 @@ describe("footer link visibility", () => {
     expect(labels(i)).toEqual(["Stake", "Decisions", "Run it", "X @Kestiv_xyz"]);
   });
 
-  it("not launched with a wallet: wallet link only, no contract and no pump.fun", () => {
+  it("not launched with a wallet: wallet link only, no lock and no pump.fun", () => {
     const i = { stake: { state: "not_launched" }, env: { cluster: "mainnet-beta" as const, wallet: "WALLET" } };
     expect(labels(i)).toContain("Kestiv wallet");
-    expect(labels(i)).not.toContain("Vesting contract");
+    expect(labels(i)).not.toContain("Latest lock");
     expect(labels(i).some((l) => l.includes("pump.fun"))).toBe(false);
     expect(hrefs(i)).toContain("https://solscan.io/account/WALLET");
   });
 
-  it("active: contract, wallet and pump.fun all show", () => {
-    const i = { stake: { state: "active", contractId: "STREAM" }, env: { cluster: "mainnet-beta" as const, wallet: "W", mint: "MINT" } };
+  it("active: lock, wallet and pump.fun all show", () => {
+    const i = { stake: { state: "active", latestLock: "ESCROW" }, env: { cluster: "mainnet-beta" as const, wallet: "W", mint: "MINT" } };
     expect(hrefs(i)).toEqual(expect.arrayContaining([
-      "https://app.streamflow.finance/contract/solana/mainnet/STREAM",
+      "https://lock.jup.ag/escrow/ESCROW",
       "https://solscan.io/account/W",
       "https://pump.fun/coin/MINT",
     ]));
   });
 
-  it("cap_reached still shows the contract", () => {
-    const i = { stake: { state: "cap_reached", contractId: "STREAM" }, env: { cluster: "mainnet-beta" as const } };
-    expect(labels(i)).toContain("Vesting contract");
+  it("cap_reached still shows the lock", () => {
+    const i = { stake: { state: "cap_reached", latestLock: "ESCROW" }, env: { cluster: "mainnet-beta" as const } };
+    expect(labels(i)).toContain("Latest lock");
   });
 
-  it("rpc_error and no_contract hide the contract link", () => {
-    for (const state of ["rpc_error", "no_contract"]) {
+  it("rpc_error and no_lock hide the lock link", () => {
+    for (const state of ["rpc_error", "no_lock"]) {
       const i = { stake: { state }, env: { cluster: "mainnet-beta" as const, wallet: "W", mint: "M" } };
-      expect(labels(i)).not.toContain("Vesting contract");
+      expect(labels(i)).not.toContain("Latest lock");
       expect(labels(i)).toContain("Kestiv wallet");
     }
   });
 
   it("devnet adds the cluster query and never links pump.fun", () => {
-    const i = { stake: { state: "active", contractId: "S" }, env: { cluster: "devnet" as const, wallet: "W", mint: "M" } };
+    const i = { stake: { state: "active", latestLock: "S" }, env: { cluster: "devnet" as const, wallet: "W", mint: "M" } };
     expect(hrefs(i)).toContain("https://solscan.io/account/W?cluster=devnet");
-    expect(hrefs(i)).toContain("https://app.streamflow.finance/contract/solana/devnet/S");
+    expect(hrefs(i)).toContain("https://solscan.io/account/S?cluster=devnet");
     expect(hrefs(i).some((h) => h.includes("pump.fun"))).toBe(false);
   });
 
@@ -58,7 +58,7 @@ describe("footer link visibility", () => {
 
   it("every external link opens safely", () => {
     const html = renderToStaticMarkup(
-      <FooterView stake={{ state: "active", contractId: "S" }} env={{ cluster: "mainnet-beta", wallet: "W", mint: "M" }} />,
+      <FooterView stake={{ state: "active", latestLock: "S" }} env={{ cluster: "mainnet-beta", wallet: "W", mint: "M" }} />,
     );
     const anchors = html.match(/<a [^>]*href="https?:[^>]*>/g) ?? [];
     expect(anchors.length).toBeGreaterThanOrEqual(4);

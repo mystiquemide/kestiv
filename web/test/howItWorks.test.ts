@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { DevnetProof, StakeView, StreamStep } from "../lib/chain";
+import type { DevnetProof, StakeView, LockStep } from "../lib/chain";
 import { FEED_ERROR_CHAIN, NOT_REPORTED, buyCard, checksCard, feesCard, lockCard, staircase } from "../lib/howItWorks";
 import { StatusResponseSchema, type PublicStatus } from "../lib/schema";
 import type { AgentStatus } from "../lib/status";
@@ -121,16 +121,16 @@ describe("buy card", () => {
 });
 
 describe("staircase", () => {
-  const steps: StreamStep[] = [
-    { sig: "TOPUP", ts: 1_000_200, kind: "topup", amount: "50000000000" },
-    { sig: "CREATE", ts: 1_000_000, kind: "create", amount: "100000000000" },
+  const steps: LockStep[] = [
+    { id: "SECOND", ts: 1_000_200, amount: "50000000000" },
+    { id: "FIRST", ts: 1_000_000, amount: "100000000000" },
   ];
 
   it("orders deposits by time and plots cumulative totals", () => {
     const s = staircase(steps, 6)!;
-    expect(s.points.map((p) => [p.sig, p.kind, p.amount, p.cumulative])).toEqual([
-      ["CREATE", "create", "100000000000", "100000000000"],
-      ["TOPUP", "topup", "50000000000", "150000000000"],
+    expect(s.points.map((p) => [p.id, p.amount, p.cumulative])).toEqual([
+      ["FIRST", "100000000000", "100000000000"],
+      ["SECOND", "50000000000", "150000000000"],
     ]);
     expect(s.total).toBe("150,000");
   });
@@ -153,12 +153,12 @@ describe("staircase", () => {
   });
 
   it("N deposits draw N equal treads", () => {
-    const five = Array.from({ length: 5 }, (_, i) => ({ sig: `S${i}`, ts: 1000 + i, kind: i === 0 ? ("create" as const) : ("topup" as const), amount: "1000000" }));
+    const five = Array.from({ length: 5 }, (_, i) => ({ id: `S${i}`, ts: 1000 + i, amount: "1000000" }));
     const s = staircase(five, 6)!;
     const xs = s.points.map((p) => p.x);
     expect(xs.slice(1).map((x, i) => Math.round((x - xs[i]!) * 100) / 100)).toEqual([113.6, 113.6, 113.6, 113.6]);
     expect(s.points.map((p) => p.y)).toEqual([...s.points.map((p) => p.y)].sort((a, b) => b - a));
-    expect(s.ariaLabel).toBe("5 deposits, from 1 to 5 tokens");
+    expect(s.ariaLabel).toBe("5 locks, from 1 to 5 tokens");
   });
 
   it("a single step is one tread spanning the whole width at full height", () => {
@@ -167,11 +167,11 @@ describe("staircase", () => {
     expect(s.points[0]).toMatchObject({ x: 16, y: 36 });
     expect(s.treadWidth).toBe(568);
     expect(s.path).toBe("M16,36 H584");
-    expect(s.ariaLabel).toBe("1 deposit of 100,000 tokens");
+    expect(s.ariaLabel).toBe("1 lock of 100,000 tokens");
   });
 
   it("writes an aria label from the real values", () => {
-    expect(staircase(steps, 6)!.ariaLabel).toBe("2 deposits, from 100,000 to 150,000 tokens");
+    expect(staircase(steps, 6)!.ariaLabel).toBe("2 locks, from 100,000 to 150,000 tokens");
   });
 
   it("has no chart for no steps", () => {
@@ -179,7 +179,7 @@ describe("staircase", () => {
   });
 
   it("formats first and last dates in UTC", () => {
-    const s = staircase([{ sig: "A", ts: 1_790_759_384, kind: "create", amount: "1000000" }, { sig: "B", ts: 1_791_000_000, kind: "topup", amount: "1000000" }], 6)!;
+    const s = staircase([{ id: "A", ts: 1_790_759_384, amount: "1000000" }, { id: "B", ts: 1_791_000_000, amount: "1000000" }], 6)!;
     expect(s.firstDate).toBe("30 Sep 2026");
     expect(s.lastDate).toBe("3 Oct 2026");
   });
@@ -188,39 +188,40 @@ describe("staircase", () => {
 describe("lock card", () => {
   const proof = (over: Partial<DevnetProof> = {}): DevnetProof => ({
     cluster: "devnet",
-    stream: { mint: "DEVMINT" } as DevnetProof["stream"],
+    mint: "DEVMINT",
+    locks: [],
+    guarantees: { cancelNobody: true, recipientNobody: true },
     steps: [
-      { sig: "C", ts: 1_000_000, kind: "create", amount: "100000000000" },
-      { sig: "T", ts: 1_000_002, kind: "topup", amount: "50000000000" },
+      { id: "C", ts: 1_000_000, amount: "100000000000" },
+      { id: "T", ts: 1_000_002, amount: "50000000000" },
     ],
-    sigs: { create: "C", topup: "T", cancel: "X" },
+    sigs: { locks: ["C", "T"], cancel: "X" },
     cancel: null,
     ...over,
   });
   const active = (): StakeView =>
-    ({ state: "active", mint: "M", cluster: "mainnet-beta", supply: "1", decimals: 6, capBps: 700, rpcKind: "helius", contractId: "S",
-      steps: [{ sig: "LIVE1", ts: 1_000_000, kind: "create", amount: "2000000" }] }) as unknown as StakeView;
+    ({ state: "active", mint: "M", cluster: "mainnet-beta", supply: "1", decimals: 6, capBps: 700, rpcKind: "helius", steps: [{ id: "LIVE1", ts: 1_000_000, amount: "2000000" }] }) as unknown as StakeView;
 
   it("uses the devnet proof, labelled, when the stake isn't live", () => {
     const c = lockCard({ state: "not_launched" }, proof(), null, 6);
     if (c.kind !== "chart") throw new Error("expected chart");
     expect(c.label).toBe("Devnet proof");
     expect(c.list.map((l) => [l.title, l.amount, l.href])).toEqual([
-      ["Created", "100,000 tokens", "https://solscan.io/tx/C?cluster=devnet"],
-      ["Top-up", "50,000 tokens", "https://solscan.io/tx/T?cluster=devnet"],
+      ["Lock 1", "100,000 tokens", "https://solscan.io/account/C?cluster=devnet"],
+      ["Lock 2", "50,000 tokens", "https://solscan.io/account/T?cluster=devnet"],
     ]);
-    expect(c.chart.ariaLabel).toBe("2 deposits, from 100,000 to 150,000 tokens");
+    expect(c.chart.ariaLabel).toBe("2 locks, from 100,000 to 150,000 tokens");
   });
 
-  it("uses the live contract's steps, unlabelled, when active", () => {
+  it("uses the live locks, unlabelled, when active", () => {
     const c = lockCard(active(), proof(), { decimals: 6 }, 6);
     if (c.kind !== "chart") throw new Error("expected chart");
     expect(c.label).toBeNull();
-    expect(c.list[0]).toMatchObject({ title: "Created", amount: "2 tokens", href: "https://solscan.io/tx/LIVE1" });
+    expect(c.list[0]).toMatchObject({ title: "Lock 1", amount: "2 tokens", href: "https://lock.jup.ag/escrow/LIVE1" });
   });
 
   it("writes an error when the devnet read or decimals fail", () => {
-    expect(lockCard({ state: "not_launched" }, null, null, 6)).toMatchObject({ kind: "error", message: "We couldn't load the contract history just now. This page checks again every minute." });
+    expect(lockCard({ state: "not_launched" }, null, null, 6)).toMatchObject({ kind: "error", message: "We couldn't load the lock history just now. This page checks again every minute." });
     expect(lockCard({ state: "not_launched" }, proof(), null, null).kind).toBe("error");
     expect(lockCard({ state: "not_launched" }, proof({ steps: [] }), null, 6).kind).toBe("error");
   });

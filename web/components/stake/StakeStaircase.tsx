@@ -41,7 +41,7 @@ export function StakeStaircase({ chart }: { chart: StakeChartModel }) {
             <button
               key={i}
               type="button"
-              aria-label={`${pt.kind === "create" ? "Created" : "Top-up"} on ${pt.date}, ${pt.amount} tokens`}
+              aria-label={`${pt.label} on ${pt.date}, ${pt.amount} tokens`}
               aria-pressed={i === active}
               onClick={() => setActive(i)}
               onMouseEnter={() => setActive(i)}
@@ -80,13 +80,13 @@ export function StakeStaircase({ chart }: { chart: StakeChartModel }) {
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-[16px]" aria-live="polite">
         <p className="text-ink">
-          <span className="text-helper">{p.kind === "create" ? "Created" : "Top-up"} · </span>
+          <span className="text-helper">{p.label} · </span>
           <span className="num">{p.date}</span> · <span className="num">{p.amount}</span> tokens
           <span className="text-helper"> · total </span>
           <span className="num">{p.cumulative}</span>
         </p>
         <a href={p.href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-6 items-center gap-1 font-medium text-ink hover:underline">
-          Transaction
+          View lock
           <ArrowUpRight size={18} strokeWidth={1.75} aria-hidden="true" />
         </a>
       </div>

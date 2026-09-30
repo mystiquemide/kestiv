@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { DevnetProof, StakeView, StreamFlags } from "../lib/chain";
+import type { DevnetProof, StakeView } from "../lib/chain";
 import { dateUtc, formatFractionPct, formatInt, formatStakePct, formatUsd, shortAddress, solFromLamports, tokensCompact } from "../lib/format";
-import { REASON_CODES, agentPanel, flagCells, lockPanel, reasonText, stakePanel } from "../lib/hero";
+import { REASON_CODES, agentPanel, lockCells, lockPanel, reasonText, stakePanel } from "../lib/hero";
 import { StatusResponseSchema, type PublicStatus } from "../lib/schema";
 import type { AgentStatus } from "../lib/status";
 import { timeAgo } from "../lib/time";
@@ -14,16 +14,13 @@ const FOUNDER = "DC1B96Rw9yftgZN7HYktA47nneFSDbu5mpedkYPxJryB";
 
 const okStatus = (live: PublicStatus | null, d: PublicStatus | null): AgentStatus => ({ ok: true, live, dry: d, fetchedAt: 1 });
 const base = { mint: "MINT", cluster: "mainnet-beta" as const, supply: "1000000000000000", decimals: 6, capBps: 700, rpcKind: "helius" as const };
-const flags = (over: Partial<StreamFlags> = {}): StreamFlags => ({
-  canTopup: true, cancelableBySender: false, cancelableByRecipient: false, transferableBySender: false,
-  transferableByRecipient: false, automaticWithdrawal: false, canUpdateRate: false, pausable: false, ...over,
-});
+const guarantees = (over: Partial<{ cancelNobody: boolean; recipientNobody: boolean }> = {}) => ({ cancelNobody: true, recipientNobody: true, ...over });
 const activeView = (over: Record<string, unknown> = {}): StakeView =>
   ({
-    state: "active", ...base, contractId: "STREAM", recipient: FOUNDER, sender: "S", multiple: false, stakePct: "1.2400",
+    state: "active", ...base, locks: [{ id: "ESCROW" }], recipient: FOUNDER, sender: "S", multiple: false, stakePct: "1.2400",
     deposited: "1240000000000", withdrawn: "0", locked: "1240000000000", vested: "0", nextUnlock: 1_798_000_000, start: 1, cliff: 1, end: 2,
-    period: 86400, amountPerPeriod: "1", flags: flags(), steps: [], ...over,
-  }) as StakeView;
+    guarantees: guarantees(), steps: [], ...over,
+  }) as unknown as StakeView;
 
 const stakeInput = (stake: StakeView, status: AgentStatus = okStatus(null, dry)) => ({ stake, status, founder: FOUNDER, cluster: "mainnet-beta" as const });
 
@@ -73,9 +70,9 @@ describe("stake panel", () => {
     expect(m.rows.map((r) => r.label)).not.toContain("Fees to stake");
   });
 
-  it("no_contract: 0.00% with the waiting rows", () => {
-    const m = stakePanel(stakeInput({ state: "no_contract", ...base }));
-    expect(m).toMatchObject({ kind: "no_contract", headline: "0.00%" });
+  it("no_lock: 0.00% with the waiting rows", () => {
+    const m = stakePanel(stakeInput({ state: "no_lock", ...base }));
+    expect(m).toMatchObject({ kind: "no_lock", headline: "0.00%" });
     expect(m.rows.map((r) => [r.label, r.value])).toEqual([["Locked", "0"], ["Next unlock", "After the first lock"], ["Fees to stake", "50%"], ["Unlocks", "After 90 days, then daily"], ["Founder", "DC1B…JryB"], ["Cap", "7% of supply"]]);
   });
 
@@ -192,27 +189,29 @@ describe("reason text", () => {
 describe("lock panel", () => {
   const proof = (over: Partial<DevnetProof> = {}): DevnetProof => ({
     cluster: "devnet",
-    stream: { id: "G28z", flags: flags() } as DevnetProof["stream"],
+    mint: "M",
+    locks: [{ id: "G28z" }, { id: "G29z" }] as DevnetProof["locks"],
+    guarantees: guarantees(),
     steps: [],
-    sigs: { create: "C", topup: "T", cancel: "CANCELSIG" },
-    cancel: { sig: "CANCELSIG", slot: 1, ts: 1, err: { InstructionError: [0, { Custom: 131 }] }, customCode: 131 },
+    sigs: { locks: ["C", "T"], cancel: "CANCELSIG" },
+    cancel: { sig: "CANCELSIG", slot: 1, ts: 1, err: { InstructionError: [0, { Custom: 6005 }] }, customCode: 6005 },
     ...over,
   });
 
-  it("maps flags to Nobody and Off", () => {
-    expect(flagCells(flags()).map((c) => [c.label, c.value, c.tone])).toEqual([
-      ["Cancel", "Nobody", "default"], ["Transfer", "Nobody", "default"], ["Rate changes", "Off", "default"], ["Pause", "Off", "default"],
+  it("maps the guarantees to Nobody, with the lock count and schedule", () => {
+    expect(lockCells(guarantees(), 3).map((c) => [c.label, c.value, c.tone])).toEqual([
+      ["Cancel", "Nobody", "default"], ["Change recipient", "Nobody", "default"], ["Locks", "3", "default"], ["Unlocks", "Daily after 90 days", "default"],
     ]);
   });
 
-  it("flags anything that could move the stake as Allowed or On in the refusal colour", () => {
-    const cells = flagCells(flags({ cancelableByRecipient: true, transferableBySender: true, canUpdateRate: true, pausable: true }));
-    expect(cells.map((c) => [c.value, c.tone])).toEqual([["Allowed", "refusal"], ["Allowed", "refusal"], ["On", "refusal"], ["On", "refusal"]]);
+  it("flags anything that could move the stake in the refusal colour", () => {
+    const cells = lockCells(guarantees({ cancelNobody: false, recipientNobody: false }), 1);
+    expect(cells.map((c) => [c.value, c.tone]).slice(0, 2)).toEqual([["Someone can", "refusal"], ["Someone can", "refusal"]]);
   });
 
-  it("uses the live contract when the stake is active, with no cancel attempt row", () => {
-    const m = lockPanel(activeView({ flags: flags() }), proof());
-    expect(m).toMatchObject({ label: "Live", cancelAttemptHref: null, streamflowHref: "https://app.streamflow.finance/contract/solana/mainnet/STREAM" });
+  it("uses the live locks when the stake is active, with no cancel attempt row", () => {
+    const m = lockPanel(activeView(), proof());
+    expect(m).toMatchObject({ label: "Live", cancelAttemptHref: null, lockLink: { href: "https://lock.jup.ag/escrow/ESCROW", label: "Open on Jupiter Lock" } });
   });
 
   it("uses the devnet proof otherwise, with the failed cancel link on the devnet cluster", () => {
@@ -220,7 +219,7 @@ describe("lock panel", () => {
       const m = lockPanel(stake, proof());
       expect(m.label).toBe("Devnet proof");
       expect(m.cancelAttemptHref).toBe("https://solscan.io/tx/CANCELSIG?cluster=devnet");
-      expect(m.streamflowHref).toBe("https://app.streamflow.finance/contract/solana/devnet/G28zWX3sniaou4EBCuBBTc1tY4kewyfRU2eT7V65fQiV");
+      expect(m.lockLink).toEqual({ href: "https://solscan.io/account/G29z?cluster=devnet", label: "Open on Solscan" });
     }
   });
 
@@ -228,8 +227,8 @@ describe("lock panel", () => {
     expect(lockPanel({ state: "not_launched" }, proof({ cancel: null })).cancelAttemptHref).toBeNull();
   });
 
-  it("writes an error when the devnet proof can't be read and there is no live contract", () => {
-    const m = lockPanel({ state: "no_contract", ...base }, null);
-    expect(m).toMatchObject({ label: "Devnet proof", error: "We couldn't load the devnet proof just now. This page checks again every minute.", cells: [], streamflowHref: null });
+  it("writes an error when the devnet proof can't be read and there is no live lock", () => {
+    const m = lockPanel({ state: "no_lock", ...base }, null);
+    expect(m).toMatchObject({ label: "Devnet proof", error: "We couldn't load the devnet proof just now. This page checks again every minute.", cells: [], lockLink: null });
   });
 });

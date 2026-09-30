@@ -32,7 +32,7 @@ export default async function StakePage() {
     getDevnetProof().catch((): DevnetProof | null => null),
   ]);
 
-  const devnetDecimals = proof ? await getMintSupply(proof.stream.mint, "devnet").then((m) => m.decimals).catch(() => null) : null;
+  const devnetDecimals = proof ? await getMintSupply(proof.mint, "devnet").then((m) => m.decimals).catch(() => null) : null;
   const now = nowSec();
   const card = stakeChartCard({ stake, proof, devnetDecimals, now });
   const stats = stakeStats({ stake, status, proof, devnetDecimals, now });

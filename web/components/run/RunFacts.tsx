@@ -14,7 +14,7 @@ export function RunFacts({ costs }: { costs: CostRow[] }) {
             </div>
           ))}
         </dl>
-        <p className="mt-4 text-caption text-helper">Streamflow and UsePod figures come from their docs and the agent&apos;s own quotes.</p>
+        <p className="mt-4 text-caption text-helper">Jupiter Lock and UsePod figures come from on-chain costs, UsePod docs and the agent&apos;s own quotes.</p>
       </article>
       <article className="rounded-card bg-band p-6 md:p-10">
         <h2 className="text-h3">What it never does</h2>

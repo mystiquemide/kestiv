@@ -3,19 +3,19 @@ export interface FaqItem {
   a: string;
 }
 
-/** Numbers here match agent/src/lock/terms.ts and agent/src/policy.ts defaults. Costs are from the Streamflow and UsePod docs. */
+/** Numbers here match agent/src/lock/terms.ts and agent/src/policy.ts defaults. Costs are on-chain rent and UsePod docs. */
 export const FAQ: FaqItem[] = [
   {
     q: "What is Kestiv?",
-    a: "An agent that turns a token's creator fees into a founder stake. It buys the token with part of the fees and locks every token it buys in one Streamflow contract for the founder.",
+    a: "An agent that turns a token's creator fees into a founder stake. It buys the token with part of the fees and locks every token it buys in its own Jupiter lock for the founder.",
   },
   {
     q: "Can the founder sell the locked tokens?",
-    a: "Not early. Nothing unlocks for the first 90 days. After that the stake unlocks a little every day for a year. The contract has no cancel, pause or rate-change switch.",
+    a: "Not early. Nothing unlocks for the first 90 days. After that the stake unlocks a little every day for a year. Each lock has cancel and change-recipient set to nobody.",
   },
   {
     q: "Can Kestiv sell?",
-    a: "No. The agent's code only swaps SOL into the token and locks what it buys. Kestiv's signing key also refuses every Streamflow instruction except creating the contract and topping it up.",
+    a: "No. The agent's code only swaps SOL into the token and locks what it buys. Kestiv's signing key also refuses every Jupiter Lock instruction except creating a lock.",
   },
   {
     q: "Where does the money come from?",
@@ -31,7 +31,7 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "What does it cost?",
-    a: "Streamflow charges about 0.16 SOL to create the contract, a 0.19% fee on the tokens locked and around 0.0147 SOL of rent. Each UsePod check costs a fraction of a cent. These figures come from the Streamflow and UsePod docs.",
+    a: "Jupiter Lock charges no fee. Each lock costs about 0.004 to 0.005 SOL in rent and network fees, and every buy gets its own lock. Each UsePod check costs a fraction of a cent. The UsePod figure comes from its docs.",
   },
   {
     q: "Is this financial advice?",

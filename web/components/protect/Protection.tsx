@@ -37,9 +37,9 @@ export function Protection({ model, lock, agent }: { model: ProtectionModel; loc
               <CircleAlert size={24} strokeWidth={1.75} className="shrink-0 text-refusal" aria-hidden="true" />
               <p>{cancel.lock.error}</p>
             </div>
-          ) : cancel.lock.streamflowHref ? (
+          ) : cancel.lock.lockLink ? (
             <p className="mt-8">
-              <ExtLink href={cancel.lock.streamflowHref}>Read them yourself on Streamflow</ExtLink>
+              <ExtLink href={cancel.lock.lockLink.href}>{`Read them yourself ${cancel.lock.lockLink.label.replace("Open on ", "on ")}`}</ExtLink>
             </p>
           ) : null}
         </div>

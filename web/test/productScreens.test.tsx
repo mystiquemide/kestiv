@@ -12,7 +12,7 @@ import { TerminalPanel } from "../components/run/TerminalPanel";
 const run = StatusResponseSchema.parse(JSON.parse(readFileSync(new URL("./fixtures/status-response-quote.json", import.meta.url), "utf8"))).dry!;
 const status: AgentStatus = { ok: true, live: null, dry: run, fetchedAt: 1 };
 const allow = readFileSync(new URL("../../agent/src/chain/allowlist.ts", import.meta.url), "utf8");
-const fx = JSON.parse(readFileSync(new URL("../../agent/test/fixtures/streamflow-instructions.json", import.meta.url), "utf8")) as Record<string, { data: string }>;
+const jup = readFileSync(new URL("../../agent/src/lock/jupiter.ts", import.meta.url), "utf8");
 
 describe("no stock photos", () => {
   it("the photo files and their module are gone", () => {
@@ -30,19 +30,19 @@ describe("no stock photos", () => {
 
 describe("signer screen", () => {
   it("shows the allowed discriminators that the agent really allows", () => {
-    for (const r of SIGNER_ROWS.filter((x) => x.verdict === "allowed" && x.detail)) expect(allow, r.name).toContain(r.detail);
+    for (const r of SIGNER_ROWS.filter((x) => x.verdict === "allowed" && x.detail)) expect(allow + jup, r.name).toContain(r.detail);
   });
 
-  it("shows the refused discriminators that the real update and cancel instructions carry", () => {
-    const upd = SIGNER_ROWS.find((r) => r.name === "Streamflow update")!;
-    const can = SIGNER_ROWS.find((r) => r.name === "Streamflow cancel")!;
-    expect(fx.update!.data.slice(0, 16)).toBe(upd.detail);
-    expect(fx.cancel!.data.slice(0, 16)).toBe(can.detail);
+  it("shows the refused discriminators that Jupiter Lock really uses for those instructions", () => {
+    const upd = SIGNER_ROWS.find((r) => r.name === "Jupiter Lock change recipient")!;
+    const can = SIGNER_ROWS.find((r) => r.name === "Jupiter Lock cancel")!;
+    expect(jup).toContain(`"${upd.detail}"`);
+    expect(jup).toContain(`"${can.detail}"`);
   });
 
   it("renders as a terminal with refusals marked and no sell, cancel or transfer allowed", () => {
     const lines = signerLines();
-    expect(lines.join("\n")).toMatch(/Streamflow cancel\s+refused/);
+    expect(lines.join("\n")).toMatch(/Jupiter Lock cancel\s+refused/);
     expect(lines.some((l) => /allowed/.test(l) && /sell|cancel|transfer/i.test(l))).toBe(false);
     const html = renderToStaticMarkup(<TerminalPanel lines={lines} title="kestiv signer" compact />);
     expect(html).toContain('aria-label="kestiv signer in a terminal"');

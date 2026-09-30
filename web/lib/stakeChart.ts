@@ -1,13 +1,15 @@
-import type { DevnetProof, StakeView, StreamStep } from "./chain";
+import type { DevnetProof, LockStep, StakeView } from "./chain";
 import { dateUtc, tokensCompact, tokensFull } from "./format";
-import { solscanTx, type LinkCluster } from "./links";
+import { lockTerms } from "./lock";
+import { lockUrl, type LinkCluster } from "./links";
 import { vestingNow, type VestingTerms } from "./vesting";
 
 export interface ChartPoint {
   /** 0 to 1 across the plot, 0 to 1 down it. */
   x: number;
   y: number;
-  kind: "create" | "topup";
+  /** "Lock 1", "Lock 2", ... in the order they were made. */
+  label: string;
   date: string;
   amount: string;
   cumulative: string;
@@ -36,14 +38,15 @@ const MAX_STEPS = 400;
 const r = (n: number) => Math.round(n * 1000 * 100) / 100;
 
 export function stakeChart(args: {
-  steps: StreamStep[];
+  steps: LockStep[];
   decimals: number;
-  terms: VestingTerms;
+  /** One schedule per lock, in any order. */
+  schedules: VestingTerms[];
   cluster: LinkCluster;
   label: "Live" | "Devnet proof";
   now: number;
 }): StakeChartModel | null {
-  const { steps, decimals, terms, cluster, label, now } = args;
+  const { steps, decimals, schedules, cluster, label, now } = args;
   if (steps.length === 0) return null;
 
   const sorted = [...steps].sort((a, b) => a.ts - b.ts);
@@ -56,50 +59,62 @@ export function stakeChart(args: {
   const a = Math.min(MAX_LEFT, n * TREAD);
   const tread = a / n;
   const tB0 = Math.max(now, sorted[n - 1]!.ts);
-  const end = Math.max(terms.end, tB0 + 1);
+  const lastEnd = Math.max(...schedules.map((x) => x.end));
+  const firstCliff = Math.min(...schedules.map((x) => x.cliff));
+  const end = Math.max(lastEnd, tB0 + 1);
   const X = (t: number) => a + ((t - tB0) / (end - tB0)) * (1 - a);
   const Y = (v: bigint) => TOP + (1 - TOP) * (1 - Number(v) / Number(total));
 
   const points: ChartPoint[] = sorted.map((s, i) => ({
     x: i * tread,
     y: Y(cum[i]!),
-    kind: s.kind,
+    label: `Lock ${i + 1}`,
     date: dateUtc(s.ts),
     amount: tokensFull(s.amount, decimals),
     cumulative: tokensFull(cum[i]!.toString(), decimals),
-    href: solscanTx(s.sig, cluster),
+    href: lockUrl(s.id, cluster),
   }));
 
   let solid = `M${r(points[0]!.x)},${r(points[0]!.y)}`;
   for (let i = 1; i < n; i++) solid += ` H${r(points[i]!.x)} V${r(points[i]!.y)}`;
   solid += ` H${r(a)}`;
 
-  // Unlocks the contract has scheduled, assuming nothing else is deposited.
-  const deposited = BigInt(terms.depositedAmount);
-  const lockedNow = BigInt(vestingNow(terms, now).locked);
-  let faint = `M${r(a)},${r(Y(lockedNow))}`;
-  const first = now < terms.cliff ? terms.cliff : terms.cliff + (Math.floor((now - terms.cliff) / terms.period) + 1) * terms.period;
-  if (now < terms.cliff) faint += ` H${r(X(terms.cliff))}`;
-  if (terms.period > 0) {
-    const count = Math.max(0, Math.floor((terms.end - first) / terms.period) + 1);
-    const stride = Math.max(1, Math.ceil(count / MAX_STEPS));
-    for (let k = 0; k < count; k += stride) {
-      const t = Math.min(first + k * terms.period, terms.end);
-      const locked = BigInt(vestingNow(terms, t).locked);
-      faint += ` H${r(X(t))} V${r(Y(locked > deposited ? deposited : locked))}`;
-    }
+  // The daily unlocks the locks have scheduled, added together, assuming nothing else is locked.
+  const lockedAt = (t: number) => schedules.reduce((sum, sc) => sum + BigInt(vestingNow(sc, t).locked), 0n);
+  const totalDeposited = schedules.reduce((sum, sc) => sum + BigInt(sc.depositedAmount), 0n);
+  const times = [
+    ...new Set(
+      schedules.flatMap((sc) => {
+        const out: number[] = [];
+        if (BigInt(sc.cliffAmount) > 0n && sc.cliff > now) out.push(sc.cliff);
+        const periods = sc.period > 0 ? Math.round((sc.end - sc.cliff) / sc.period) : 0;
+        for (let k = 1; k <= periods; k++) {
+          const t = sc.cliff + k * sc.period;
+          if (t > now) out.push(t);
+        }
+        return out;
+      }),
+    ),
+  ].sort((x, y) => x - y);
+  let faint = `M${r(a)},${r(Y(lockedAt(now)))}`;
+  if (now < firstCliff) faint += ` H${r(X(firstCliff))}`;
+  const stride = Math.max(1, Math.ceil(times.length / MAX_STEPS));
+  for (let k = 0; k < times.length; k += stride) {
+    const t = times[k]!;
+    const locked = lockedAt(t);
+    faint += ` H${r(X(t))} V${r(Y(locked > totalDeposited ? totalDeposited : locked))}`;
   }
   faint += ` H1 V${r(Y(0n))}`;
 
-  const cliffX = terms.cliff >= tB0 ? X(terms.cliff) : null;
-  const cliff = cliffX === null ? null : { x: cliffX, date: dateUtc(terms.cliff) };
+  const cliffX = firstCliff >= tB0 ? X(firstCliff) : null;
+  const cliff = cliffX === null ? null : { x: cliffX, date: dateUtc(firstCliff) };
 
   const xTicks: StakeChartModel["xTicks"] = [
-    { x: 0, label: dateUtc(sorted[0]!.ts), sub: "First deposit", align: "left" },
+    { x: 0, label: dateUtc(sorted[0]!.ts), sub: "First lock", align: "left" },
     { x: a, label: dateUtc(tB0), sub: "Today", align: "center" },
   ];
   if (cliff) xTicks.push({ x: cliff.x, label: cliff.date, sub: "Unlocks begin", align: "center" });
-  xTicks.push({ x: 1, label: dateUtc(terms.end), sub: "Unlocks end", align: "right" });
+  xTicks.push({ x: 1, label: dateUtc(lastEnd), sub: "Unlocks end", align: "right" });
 
   const yTicks = [
     { y: Y(total), label: tokensCompact(total.toString(), decimals) },
@@ -108,11 +123,11 @@ export function stakeChart(args: {
 
   const tokens = tokensFull(total.toString(), decimals);
   const ariaLabel =
-    `${n} ${n === 1 ? "deposit" : "deposits"} locking ${tokens} tokens. ` +
-    (cliff ? `Nothing unlocks before ${cliff.date}, then a little each day until ${dateUtc(terms.end)}.` : `Unlocks end ${dateUtc(terms.end)}.`);
+    `${n} ${n === 1 ? "lock" : "locks"} holding ${tokens} tokens. ` +
+    (cliff ? `Nothing unlocks before ${cliff.date}, then a little each day until ${dateUtc(lastEnd)}.` : `Unlocks end ${dateUtc(lastEnd)}.`);
 
   const legend =
-    "Each brass square is one deposit, and each gets the same width. Right of Today the axis is real time. The faint line is the daily unlock the contract has scheduled, if nothing else is added.";
+    "Each brass square is one lock, and each gets the same width. Right of Today the axis is real time. The faint line is the daily unlock the locks have scheduled, if nothing else is locked.";
 
   return { label, solid, faint, cliff, points, xTicks, yTicks, ariaLabel, legend };
 }
@@ -123,7 +138,7 @@ export type StakeChartCard =
 
 const EMPTY = "$KESTIV has no lock yet, and the devnet proof couldn't be loaded. The staircase appears with the first lock.";
 
-/** The live contract when there is one, otherwise the labelled devnet proof. */
+/** The live locks when there are any, otherwise the labelled devnet proof. */
 export function stakeChartCard(args: {
   stake: StakeView;
   proof: DevnetProof | null;
@@ -135,7 +150,7 @@ export function stakeChartCard(args: {
     const chart = stakeChart({
       steps: stake.steps,
       decimals: stake.decimals,
-      terms: { depositedAmount: stake.deposited, withdrawnAmount: stake.withdrawn, cliff: stake.cliff, cliffAmount: "0", end: stake.end, period: stake.period, amountPerPeriod: stake.amountPerPeriod },
+      schedules: stake.locks.map(lockTerms),
       cluster: stake.cluster === "devnet" ? "devnet" : "mainnet-beta",
       label: "Live",
       now,
@@ -143,11 +158,10 @@ export function stakeChartCard(args: {
     if (chart) return { kind: "chart", chart };
   }
   if (proof && devnetDecimals !== null) {
-    const s = proof.stream;
     const chart = stakeChart({
       steps: proof.steps,
       decimals: devnetDecimals,
-      terms: { depositedAmount: s.depositedAmount, withdrawnAmount: s.withdrawnAmount, cliff: s.cliff, cliffAmount: s.cliffAmount, end: s.end, period: s.period, amountPerPeriod: s.amountPerPeriod },
+      schedules: proof.locks.map(lockTerms),
       cluster: "devnet",
       label: "Devnet proof",
       now,

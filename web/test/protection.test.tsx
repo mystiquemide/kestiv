@@ -14,9 +14,9 @@ const dry = response.dry!;
 const ok = (live: typeof dry | null, d: typeof dry | null): AgentStatus => ({ ok: true, live, dry: d, fetchedAt: 1 });
 const g = (name: string, value: Gate["value"], threshold: Gate["threshold"], pass = true): Gate => ({ name, value, threshold, pass });
 
-const flags = { canTopup: true, cancelableBySender: false, cancelableByRecipient: false, transferableBySender: false, transferableByRecipient: false, automaticWithdrawal: false, canUpdateRate: false, pausable: false };
-const proof = { cluster: "devnet", stream: { id: "G28z", mint: "M", flags }, steps: [], sigs: { create: "C", topup: "T", cancel: "X" }, cancel: null } as unknown as DevnetProof;
-const active = { state: "active", cluster: "mainnet-beta", contractId: "STREAM", flags } as unknown as StakeView;
+const guarantees = { cancelNobody: true, recipientNobody: true };
+const proof = { cluster: "devnet", mint: "M", locks: [{ id: "G28z" }], guarantees, steps: [], sigs: { locks: ["C"], cancel: "X" }, cancel: null } as unknown as DevnetProof;
+const active = { state: "active", cluster: "mainnet-beta", locks: [{ id: "ESCROW" }], guarantees } as unknown as StakeView;
 
 describe("gateRule", () => {
   it("writes a sentence for each gate from its own threshold", () => {
@@ -68,24 +68,24 @@ describe("buyRules", () => {
 });
 
 describe("protection model", () => {
-  it("reuses the lock panel: live flags and Streamflow link when active", () => {
+  it("reuses the lock panel: live guarantees and Jupiter Lock link when active", () => {
     const m = protectionModel({ status: ok(null, dry), stake: active, proof });
     expect(m.cancel.lock.label).toBe("Live");
-    expect(m.cancel.lock.cells.map((c) => c.value)).toEqual(["Nobody", "Nobody", "Off", "Off"]);
-    expect(m.cancel.lock.streamflowHref).toBe("https://app.streamflow.finance/contract/solana/mainnet/STREAM");
+    expect(m.cancel.lock.cells.map((c) => c.value)).toEqual(["Nobody", "Nobody", "1", "Daily after 90 days"]);
+    expect(m.cancel.lock.lockLink).toEqual({ href: "https://lock.jup.ag/escrow/ESCROW", label: "Open on Jupiter Lock" });
   });
 
   it("uses the devnet proof otherwise, and has no link when neither can be read", () => {
     expect(protectionModel({ status: ok(null, dry), stake: { state: "not_launched" }, proof }).cancel.lock.label).toBe("Devnet proof");
     const none = protectionModel({ status: ok(null, dry), stake: { state: "not_launched" }, proof: null });
     expect(none.cancel.lock.error).toBe("We couldn't load the devnet proof just now. This page checks again every minute.");
-    expect(none.cancel.lock.streamflowHref).toBeNull();
+    expect(none.cancel.lock.lockLink).toBeNull();
   });
 
   it("claims only what was verified about the flags", () => {
-    expect(CANCEL_TEXT).not.toMatch(/nobody can switch them back on/i);
-    expect(CANCEL_TEXT).toContain("Cancel, pause and rate changes");
-    expect(CANCEL_TEXT).toContain("Kestiv's signer refuses the one Streamflow instruction that could turn it on");
+    expect(CANCEL_TEXT).toContain("Cancel and change-recipient are set to nobody when each lock is created");
+    expect(CANCEL_TEXT).toContain("refuses every Jupiter Lock instruction except creating a lock");
+    expect(CANCEL_TEXT).not.toMatch(/streamflow/i);
   });
 
   it("shows the code link only when a repo URL is set", () => {

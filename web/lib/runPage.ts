@@ -91,18 +91,18 @@ export interface CostRow {
 
 export function costRows(status: AgentStatus): CostRow[] {
   const run = status.ok ? (status.live ?? status.dry) : null;
-  const contract = run ? `About ${solFromLamports(run.policy.contractCreationLamports)} SOL, once` : "About 0.18 SOL, once";
+  const lock = run ? `About ${solFromLamports(run.policy.lockRentLamports)} SOL per lock` : "About 0.005 SOL per lock";
   const lastQuote = run?.runs[0]?.usepod?.lamports ?? null;
   const usepod = lastQuote !== null ? `${lastQuote} lamports on the last check` : "A few hundred lamports per check";
   return [
-    { label: "Streamflow contract", value: contract },
-    { label: "Streamflow fee", value: "0.19% of the tokens locked" },
+    { label: "Jupiter Lock", value: lock },
+    { label: "Lock fee", value: "None" },
     { label: "UsePod check", value: usepod },
   ];
 }
 
 export const NEVER = [
   { label: "Sell", text: "There is no sell code. Kestiv only buys and locks." },
-  { label: "Cancel or move locked tokens", text: "Its signer refuses every Streamflow instruction except creating the contract and topping it up." },
+  { label: "Cancel or move locked tokens", text: "Its signer refuses every Jupiter Lock instruction except creating a lock." },
   { label: "Let a model pick the amount", text: "Policy sets the slice. UsePod can only say no." },
 ] as const;

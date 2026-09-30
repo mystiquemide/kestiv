@@ -100,7 +100,7 @@ describe("microcopy", () => {
     const { reasonText } = await import("../lib/hero");
     expect(reasonText("usepod_skip", 1)).not.toMatch(/circular|concentrated/i);
     expect(reasonText("run_failed", 1)).toContain("tries again on its next run");
-    expect(reasonText("lock_terms_violation", 1)).toContain("Check the contract on Streamflow");
+    expect(reasonText("lock_terms_violation", 1)).toContain("Check the lock on Jupiter Lock");
   });
 
   it("the copy button announces Copied through a live region and keeps a steady label", async () => {

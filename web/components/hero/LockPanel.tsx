@@ -24,10 +24,10 @@ export function LockPanel({ model, className = "" }: { model: LockPanelModel; cl
               </ExternalLink>
             </div>
           ) : null}
-          {model.streamflowHref ? (
+          {model.lockLink ? (
             <p className="mt-4 text-[16px]">
-              <ExternalLink href={model.streamflowHref} className="text-ink">
-                Open on Streamflow
+              <ExternalLink href={model.lockLink.href} className="text-ink">
+                {model.lockLink.label}
               </ExternalLink>
             </p>
           ) : null}

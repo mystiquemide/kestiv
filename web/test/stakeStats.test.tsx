@@ -13,13 +13,17 @@ const run = StatusResponseSchema.parse(JSON.parse(readFileSync(new URL("./fixtur
 const status: AgentStatus = { ok: true, live: null, dry: run, fetchedAt: 1 };
 const down = { ok: false, error: "x" } as unknown as AgentStatus;
 const terms = { depositedAmount: "150000000", withdrawnAmount: "0", cliff: T0 + 90 * DAY, cliffAmount: "0", end: T0 + 455 * DAY, period: DAY, amountPerPeriod: "410959" };
-const proof = { stream: terms } as unknown as DevnetProof;
+const lock = {
+  id: "L", recipient: "R", mint: "M", creator: "C", updateRecipientMode: 0, cancelMode: 0, tokenProgramFlag: 1, cliff: terms.cliff, frequency: DAY,
+  cliffUnlockAmount: "0", amountPerPeriod: terms.amountPerPeriod, periods: 365, claimed: "0", start: T0, cancelledAt: 0, deposited: "150000035", end: terms.end,
+};
+const proof = { locks: [lock] } as unknown as DevnetProof;
 const live = (over = {}) =>
   ({ state: "active", decimals: 6, stakePct: "1.84", locked: "18400000000000", vested: "0", nextUnlock: T0 + 90 * DAY, capBps: 700, ...over }) as unknown as StakeView;
 const get = (m: ReturnType<typeof stakeStats>, l: string) => m.cells.find((c) => c.label === l)!;
 
 describe("stake stats", () => {
-  it("live contract: locked, vested, next unlock and cap, no Devnet label", () => {
+  it("live locks: locked, vested, next unlock and cap, no Devnet label", () => {
     const m = stakeStats({ stake: live(), status, proof: null, devnetDecimals: null, now: T0 });
     expect(m.label).toBeNull();
     expect(m.cells.map((c) => c.label)).toEqual(["Locked", "Vested so far", "Next unlock", "Cap"]);
@@ -40,7 +44,7 @@ describe("stake stats", () => {
     expect(m.label).toBe("Devnet proof");
     expect(get(m, "Locked").value).toBe("150");
     expect(get(m, "Vested so far").value).toBe("0");
-    expect(get(m, "Next unlock").value).toBe("20 Dec 2026");
+    expect(get(m, "Next unlock").value).toBe("21 Dec 2026");
     expect(get(m, "Cap").sub).toBe("Buying stops at the cap");
   });
 
