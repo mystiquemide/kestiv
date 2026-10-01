@@ -111,7 +111,7 @@ export function stakeChart(args: {
 
   // When the first lock was made today the two ticks sit on top of each other, so they share one label.
   const firstDate = dateUtc(sorted[0]!.ts);
-  const sameDay = a < 0.12 && firstDate === dateUtc(tB0);
+  const sameDay = a <= TREAD && firstDate === dateUtc(tB0);
   const xTicks: StakeChartModel["xTicks"] = sameDay
     ? [{ x: 0, label: firstDate, sub: "First lock, today", align: "left" }]
     : [
