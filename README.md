@@ -122,7 +122,7 @@ One mainnet stake. On 30 Sep 2026 I started a buy by hand with the agent's own b
 
 Real: the mainnet lock and its transactions, the devnet locks and cancel proof, the chain reads, the agent's checks, the practice runs against a live token, the site, and the tests. Pending: fee-funded buys and locks by the running agent, paid UsePod verdicts, and the agents-skills pull request being merged. There are no mocked numbers on the site.
 
-Tests: 178 in `agent/`, 242 in `web/`. Run `npm test` from the root.
+Tests: 178 in `agent/`, 244 in `web/`. Run `npm test` from the root.
 
 ## Run locally
 
