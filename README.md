@@ -8,6 +8,8 @@ Live: https://kestiv.midelabs.xyz · X: [@Kestiv_xyz](https://x.com/Kestiv_xyz)
 
 Built for AnsemHack Clawrena, in the ClawPump x pump.fun and UsePod Inference Markets tracks.
 
+[![Watch the Kestiv demo (1:56)](docs/media/demo-thumbnail.jpg)](https://youtu.be/58rbX0VuxZ0)
+
 ## The story
 
 ClawPump looked at 7,215 of its own launches. The median founder ended up with 0.004 SOL of their own token, about 0.01% of supply. Two thirds took nothing at all. Their own conclusion: [nothing in the product has ever let builders buy into their own token later](https://clawpump.tech/experiments/founder-allocation).
