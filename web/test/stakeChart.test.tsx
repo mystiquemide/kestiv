@@ -54,6 +54,11 @@ describe("stake chart model", () => {
     expect(c.xTicks.map((t) => t.sub)).toEqual(["First lock", "Today", "Unlocks end"]);
   });
 
+  it("shares one tick when a single lock was made today, so the labels do not collide", () => {
+    const c = build({ steps: steps.slice(0, 1), schedules: schedules.slice(0, 1) });
+    expect(c.xTicks.map((t) => t.sub)).toEqual(["First lock, today", "Unlocks begin", "Unlocks end"]);
+  });
+
   it("returns null with no locks and never exceeds the stride cap on tiny periods", () => {
     expect(stakeChart({ steps: [], decimals: 6, schedules, cluster: "devnet", label: "Live", now: T0 })).toBeNull();
     const fast = build({ schedules: schedules.map((s) => ({ ...s, period: 1, end: s.cliff + 365 })) });
