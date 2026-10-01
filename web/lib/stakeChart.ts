@@ -109,14 +109,14 @@ export function stakeChart(args: {
   const cliffX = firstCliff >= tB0 ? X(firstCliff) : null;
   const cliff = cliffX === null ? null : { x: cliffX, date: dateUtc(firstCliff) };
 
-  // When the first lock was made today the two ticks sit on top of each other, so they share one label.
+  // With a single lock the first-lock and today ticks sit almost on top of each other, so they share one label.
   const firstDate = dateUtc(sorted[0]!.ts);
-  const sameDay = a <= TREAD && firstDate === dateUtc(tB0);
-  const xTicks: StakeChartModel["xTicks"] = sameDay
-    ? [{ x: 0, label: firstDate, sub: "First lock, today", align: "left" }]
+  const todayDate = dateUtc(tB0);
+  const xTicks: StakeChartModel["xTicks"] = a <= TREAD
+    ? [{ x: 0, label: firstDate, sub: firstDate === todayDate ? "First lock, today" : `First lock, today is ${todayDate}`, align: "left" }]
     : [
         { x: 0, label: firstDate, sub: "First lock", align: "left" },
-        { x: a, label: dateUtc(tB0), sub: "Today", align: "center" },
+        { x: a, label: todayDate, sub: "Today", align: "center" },
       ];
   if (cliff) xTicks.push({ x: cliff.x, label: cliff.date, sub: "Unlocks begin", align: "center" });
   xTicks.push({ x: 1, label: dateUtc(lastEnd), sub: "Unlocks end", align: "right" });

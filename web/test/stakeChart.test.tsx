@@ -59,6 +59,12 @@ describe("stake chart model", () => {
     expect(c.xTicks.map((t) => t.sub)).toEqual(["First lock, today", "Unlocks begin", "Unlocks end"]);
   });
 
+  it("still merges them when today is a later date than the first lock", () => {
+    const c = build({ steps: steps.slice(0, 1), schedules: schedules.slice(0, 1), now: T0 + DAY });
+    expect(c.xTicks[0]!.sub).toMatch(/^First lock, today is \d+ \w+ \d{4}$/);
+    expect(c.xTicks).toHaveLength(3);
+  });
+
   it("returns null with no locks and never exceeds the stride cap on tiny periods", () => {
     expect(stakeChart({ steps: [], decimals: 6, schedules, cluster: "devnet", label: "Live", now: T0 })).toBeNull();
     const fast = build({ schedules: schedules.map((s) => ({ ...s, period: 1, end: s.cliff + 365 })) });
